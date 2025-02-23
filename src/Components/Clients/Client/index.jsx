@@ -6,10 +6,9 @@ import InvoicePreview from "../../Invoices/InvoicePreview";
 const Client = () => {
   const { id } = useParams();
   const [client, setClient] = useState(null);
-  const [invoices, setInvoices] = useState({}); // حالة لتخزين الفواتير
-  const [loadingInvoices, setLoadingInvoices] = useState(false); // حالة تحميل الفواتير
+  const [invoices, setInvoices] = useState({});
+  const [loadingInvoices, setLoadingInvoices] = useState(false);
 
-  // جلب تفاصيل العميل بناءً على الـ ID
   useEffect(() => {
     const fetchClient = async () => {
       try {
@@ -24,15 +23,16 @@ const Client = () => {
   }, [id]);
 
   const fetchInvoices = async () => {
-    const invoicesData = {};
-    for (const booking of client.bookings) {
-      // تحقق من هيكل booking لمعرفة مكان وجود tripId
-      const tripId =
-        booking.tripId || booking.busDetails?.tripId || booking.trip?._id;
+    if (!client?.bookings?.length) return;
+    setLoadingInvoices(true);
 
+    const invoicesData = {};
+
+    for (const booking of client.bookings) {
+      const tripId = booking?._id; // Ensure correct tripId
       if (!tripId) {
-        console.error("tripId is undefined for booking:", booking);
-        continue; // تخطى هذه الحجز إذا كان tripId غير معرّف
+        console.warn("tripId is undefined for booking:", booking);
+        continue;
       }
 
       try {
@@ -42,17 +42,42 @@ const Client = () => {
         invoicesData[tripId] = response.data;
       } catch (error) {
         console.error(`Error fetching invoice for trip ${tripId}:`, error);
-        invoicesData[tripId] = null; // إذا لم توجد فاتورة
+        invoicesData[tripId] = null;
       }
     }
-    setInvoices(invoicesData);
+
+    // ✅ Use Functional State Update to Avoid Overwriting
+    setInvoices((prevInvoices) => ({ ...prevInvoices, ...invoicesData }));
+    setLoadingInvoices(false);
   };
-  // جلب الفواتير لكل رحلة
+
   useEffect(() => {
-    if (client && client.bookings) {
+    if (client?.bookings?.length) {
       fetchInvoices();
     }
   }, [client, id]);
+
+  useEffect(() => {
+    async function fetchInvoices() {
+      try {
+        const response = await fetch(`/api/invoices`);
+        const data = await response.json();
+        console.log("Fetched invoices data:", data);
+
+        const invoiceMap = {};
+        data.forEach((invoice) => {
+          invoiceMap[invoice.trip] = invoice; // Use `trip` as the key
+        });
+
+        setInvoices(invoiceMap);
+        console.log("Updated invoices state:", invoiceMap);
+      } catch (error) {
+        console.error("Error fetching invoices:", error);
+      }
+    }
+
+    fetchInvoices();
+  }, []);
 
   if (!client) {
     return <div>Loading...</div>;
@@ -86,38 +111,44 @@ const Client = () => {
           <p>جاري تحميل الفواتير...</p>
         ) : client.bookings.length > 0 ? (
           <ul className="space-y-4">
-            {client.bookings.map((booking) => (
-              <li key={booking._id} className="p-4 border rounded-lg">
-                <p>
-                  <strong>رقم الرحلة:</strong> {booking.tripNumber}
-                </p>
-                <p>
-                  <strong>التاريخ:</strong>{" "}
-                  {new Date(booking.date).toLocaleDateString()}
-                </p>
-                <p>
-                  <strong>شركة التأجير:</strong> {booking.leasingCompany}
-                </p>
-                <p>
-                  <strong>تكلفة الرحلة:</strong> {booking.totalTripCost}
-                </p>
-                <p>
-                  <strong>المبلغ المدفوع:</strong> {booking.totalTripPaid}
-                </p>
-                <p>
-                  <strong>صافي المبلغ:</strong> {booking.totalTripNetAmount}
-                </p>
+            {client.bookings.map((booking) => {
+              const tripId = booking?._id;
 
-                {/* عرض الفاتورة أو رسالة "لا يوجد" */}
-                {invoices[booking.busDetails?.tripId] ? (
-                  <InvoicePreview
-                    booking={invoices[booking.busDetails.tripId]}
-                  />
-                ) : (
-                  <p className="text-red-500">لا يوجد فاتورة لهذه الرحلة.</p>
-                )}
-              </li>
-            ))}
+              console.log("tripId:", tripId);
+              console.log("Invoices object:", invoices);
+              console.log("Resolved invoice:", invoices[tripId]);
+
+              return (
+                <li key={tripId} className="p-4 border rounded-lg">
+                  <p>
+                    <strong>رقم الرحلة:</strong> {booking.tripNumber}
+                  </p>
+                  <p>
+                    <strong>التاريخ:</strong>{" "}
+                    {new Date(booking.date).toLocaleDateString()}
+                  </p>
+                  <p>
+                    <strong>شركة التأجير:</strong> {booking.leasingCompany}
+                  </p>
+                  <p>
+                    <strong>تكلفة الرحلة:</strong> {booking.totalTripCost}
+                  </p>
+                  <p>
+                    <strong>المبلغ المدفوع:</strong> {booking.totalTripPaid}
+                  </p>
+                  <p>
+                    <strong>صافي المبلغ:</strong> {booking.totalTripNetAmount}
+                  </p>
+
+                  {/* عرض الفاتورة أو رسالة "لا يوجد" */}
+                  {invoices[tripId] ? (
+                    <InvoicePreview booking={invoices[tripId]} />
+                  ) : (
+                    <p className="text-red-500">لا يوجد فاتورة لهذه الرحلة.</p>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         ) : (
           <p>لا توجد حجوزات لهذا العميل.</p>

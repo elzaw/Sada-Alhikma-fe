@@ -1,8 +1,23 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 
 const InvoicePreview = ({ booking }) => {
+  const [client, setClient] = useState(null);
+
+  useEffect(() => {
+    const fetchClient = async () => {
+      try {
+        const response = await instance.get(`/clients/${id}`);
+        setClient(response.data);
+      } catch (error) {
+        console.error("Error fetching client details:", error);
+      }
+    };
+  });
+
   const handlePrint = () => {
     // إنشاء نافذة منبثقة
+    console.log(booking);
+
     const printWindow = window.open("", "_blank");
 
     // محتوى الفاتورة مع تصميم محسّن
@@ -148,13 +163,13 @@ const InvoicePreview = ({ booking }) => {
           <strong>شركة التأجير:</strong> {booking.leasingCompany}
         </p>
         <p>
-          <strong>تكلفة الرحلة:</strong> {booking.totalTripCost} ريال
+          <strong>تكلفة الرحلة:</strong> {booking.totalAmount} ريال
         </p>
         <p>
-          <strong>المبلغ المدفوع:</strong> {booking.totalTripPaid} ريال
+          <strong>المبلغ المدفوع:</strong> {booking.paidAmount} ريال
         </p>
         <p>
-          <strong>صافي المبلغ:</strong> {booking.totalTripNetAmount} ريال
+          <strong>الباقي:</strong> {booking.remainingAmount} ريال
         </p>
       </div>
       <button
