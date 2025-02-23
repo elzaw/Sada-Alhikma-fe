@@ -2,26 +2,27 @@ import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import instance from "../../../API/instance";
 import toast from "react-hot-toast";
+import * as XLSX from "xlsx"; // Import xlsx library
 
 const TripPage = () => {
-  const { tripId } = useParams(); // Get tripId from URL params
-  const [trip, setTrip] = useState(null); // State to store trip details
-  const [clients, setClients] = useState([]); // State to store clients associated with the trip
-  const [searchTerm, setSearchTerm] = useState(""); // State to store search term for clients
-  const [searchResults, setSearchResults] = useState([]); // State to store search results
-  const [isFormVisible, setIsFormVisible] = useState(false); // State to control form visibility
+  const { tripId } = useParams();
+  const [trip, setTrip] = useState(null);
+  const [clients, setClients] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [isFormVisible, setIsFormVisible] = useState(false);
   const [newClient, setNewClient] = useState({
-    _id: "", // Client ID
-    name: "", // Client name
-    clientCount: 1, // Number of individuals (client + accompanying persons)
-    pricePerPerson: 0, // Price per person
-    totalCost: 0, // Total cost (clientCount * pricePerPerson)
-    phone: "", // Client phone number
-    identityNumber: "", // Client identity number
-    nationality: "", // Client nationality
-    boardingLocation: "", // Boarding location
-    returnStatus: "لا", // Return status (Yes/No)
-    accompanyingPersons: [], // List of accompanying persons
+    _id: "",
+    name: "",
+    clientCount: 1,
+    pricePerPerson: 0,
+    totalCost: 0,
+    phone: "",
+    identityNumber: "",
+    nationality: "",
+    boardingLocation: "",
+    returnStatus: "لا",
+    accompanyingPersons: [],
   });
 
   // Toggle form visibility
@@ -29,22 +30,23 @@ const TripPage = () => {
     setIsFormVisible((prev) => !prev);
   };
 
-  // Fetch trip and associated clients when the component mounts or tripId changes
+  // Fetch trip and associated clients
   const fetchTrip = async () => {
     try {
       const response = await instance.get(`/trips/${tripId}`);
-      setTrip(response.data); // Set trip details
-      setClients(response.data.clients || []); // Set clients associated with the trip
+      setTrip(response.data);
+      setClients(response.data.clients || []);
     } catch (error) {
       console.error("Error fetching trip:", error);
       toast.error("فشل في تحميل بيانات الرحلة.");
     }
   };
+
   useEffect(() => {
     fetchTrip();
   }, [tripId]);
 
-  // Calculate total cost whenever clientCount or pricePerPerson changes
+  // Calculate total cost
   useEffect(() => {
     const total = newClient.clientCount * newClient.pricePerPerson;
     setNewClient((prev) => ({
@@ -58,17 +60,16 @@ const TripPage = () => {
     }));
   }, [newClient.clientCount, newClient.pricePerPerson]);
 
-  // Perform a real-time search for clients based on the search term
+  // Search clients
   useEffect(() => {
     const searchClients = async () => {
       if (searchTerm.trim() === "") {
-        setSearchResults([]); // Clear results if search term is empty
+        setSearchResults([]);
         return;
       }
 
       try {
         const response = await instance.get(`/clients?search=${searchTerm}`);
-        // Filter results based on name or identity number
         const filteredResults = response.data.filter((client) => {
           return (
             client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -82,18 +83,17 @@ const TripPage = () => {
       }
     };
 
-    // Add a delay to avoid making too many API calls
     const delayDebounce = setTimeout(() => {
       searchClients();
-    }, 300); // 300ms delay
+    }, 300);
 
-    return () => clearTimeout(delayDebounce); // Cleanup timeout
+    return () => clearTimeout(delayDebounce);
   }, [searchTerm]);
 
-  // Handle selecting a client from search results
+  // Handle selecting a client
   const handleSelectClient = (client) => {
     setNewClient({
-      _id: client._id, // Set client ID
+      _id: client._id,
       name: client.name,
       clientCount: 1,
       pricePerPerson: 0,
@@ -103,13 +103,13 @@ const TripPage = () => {
       nationality: client.nationality || "",
       boardingLocation: "",
       returnStatus: "لا",
-      accompanyingPersons: [], // Reset accompanying persons
+      accompanyingPersons: [],
     });
-    setSearchResults([]); // Clear search results
-    setSearchTerm(""); // Clear search term
+    setSearchResults([]);
+    setSearchTerm("");
   };
 
-  // Handle adding a new client to the trip
+  // Handle adding a new client
   const handleAddClient = async (e) => {
     e.preventDefault();
 
@@ -118,12 +118,10 @@ const TripPage = () => {
       accompanyingPersons: newClient?.accompanyingPersons ?? [],
       returnStatus: newClient?.returnStatus === "نعم" ? "نعم" : "لا",
       returnDate:
-        newClient?.returnStatus === "نعم" ? newClient.returnDate : undefined, // إرسال returnDate فقط إذا كان returnStatus هو "نعم"
+        newClient?.returnStatus === "نعم" ? newClient.returnDate : undefined,
       totalCost: newClient?.totalCost ?? 0,
       totalPaid: newClient?.totalPaid ?? 0,
     };
-
-    console.log("Client data being sent:", clientData);
 
     try {
       const response = await instance.post(
@@ -133,21 +131,7 @@ const TripPage = () => {
 
       if (response.status === 201) {
         toast.success("تم إضافة العميل بنجاح!");
-
-        // إعادة تحميل بيانات الرحلة
         await fetchTrip();
-
-        const fullClientData = await fetchClientById(newClient._id);
-
-        if (fullClientData) {
-          const newClientData = {
-            ...fullClientData,
-            ...response.data,
-          };
-
-          setClients((prevClients) => [...prevClients, newClientData]);
-        }
-
         setNewClient({
           _id: "",
           name: "",
@@ -158,12 +142,10 @@ const TripPage = () => {
           identityNumber: "",
           nationality: "",
           boardingLocation: "",
-          returnStatus: "لا", // Reset returnStatus to "لا"
-          returnDate: "", // Reset returnDate
+          returnStatus: "لا",
+          returnDate: "",
           accompanyingPersons: [],
         });
-
-        fetchTrip();
       }
     } catch (error) {
       console.error("Error adding client:", error);
@@ -171,45 +153,83 @@ const TripPage = () => {
     }
   };
 
-  // Fetch client details by ID
-  const fetchClientById = async (clientId) => {
-    try {
-      const response = await instance.get(`/clients/${clientId}`);
-      return response.data; // Return the client data
-    } catch (error) {
-      console.error("Error fetching client:", error);
-      toast.error("فشل في تحميل بيانات العميل.");
-      return null;
+  // Export to Excel
+  // Export to Excel with formatting
+  const exportToExcel = () => {
+    const data = clients.flatMap((client) => {
+      const clientData = [
+        {
+          الاسم: client.client.name,
+          "رقم الهوية": client.client.identityNumber,
+          "رقم الجوال": client.client.phone,
+          "مكان الركوب": client.client.boardingLocation,
+        },
+      ];
+
+      const accompanyingPersonsData = client.accompanyingPersons.map(
+        (person) => ({
+          الاسم: person.name,
+          "رقم الهوية": person.identityNumber,
+          "رقم الجوال": client.client.phone, // نفس رقم هاتف العميل
+          "مكان الركوب": client.client.boardingLocation,
+        })
+      );
+
+      return [...clientData, ...accompanyingPersonsData];
+    });
+
+    // Create a new workbook
+    const wb = XLSX.utils.book_new();
+
+    // Convert data to worksheet
+    const ws = XLSX.utils.json_to_sheet(data);
+
+    // Add styles to the worksheet
+    const headerStyle = {
+      font: { bold: true, color: { rgb: "FFFFFF" } },
+      fill: { fgColor: { rgb: "4F81BD" } }, // لون خلفية العنوان
+      alignment: { horizontal: "center" },
+    };
+
+    // Apply header style
+    const range = XLSX.utils.decode_range(ws["!ref"]);
+    for (let C = range.s.c; C <= range.e.c; ++C) {
+      const cellAddress = XLSX.utils.encode_cell({ r: range.s.r, c: C });
+      if (!ws[cellAddress]) continue;
+      ws[cellAddress].s = headerStyle;
     }
+
+    // Add borders to all cells
+    for (let R = range.s.r; R <= range.e.r; ++R) {
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+        if (!ws[cellAddress]) ws[cellAddress] = {};
+        ws[cellAddress].s = {
+          border: {
+            top: { style: "thin", color: { rgb: "000000" } },
+            bottom: { style: "thin", color: { rgb: "000000" } },
+            left: { style: "thin", color: { rgb: "000000" } },
+            right: { style: "thin", color: { rgb: "000000" } },
+          },
+        };
+      }
+    }
+
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(wb, ws, "الرحلة");
+
+    // Write file
+    XLSX.writeFile(wb, `كشف الرحلة - ${trip.tripNumber}.xlsx`);
   };
 
-  // Render loading state if trip data is not yet available
   if (!trip) {
     return <div>جارٍ التحميل...</div>;
   }
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "لا يوجد"; // إذا كان التاريخ غير موجود
-
-    const date = new Date(dateString);
-    const day = String(date.getDate()).padStart(2, "0"); // اليوم
-    const month = String(date.getMonth() + 1).padStart(2, "0"); // الشهر (يبدأ من 0)
-    const year = date.getFullYear(); // السنة
-
-    return `${day}-${month}-${year}`; // التنسيق المطلوب: dd-mm-yyyy
-  };
-
   return (
     <div className="p-6">
-      {/* Trip Details Section */}
       <h1 className="text-2xl font-bold mb-4">
-        رحلة: {trip.tripNumber} - {new Date(trip.date).toLocaleDateString()} -{" "}
-        {new Date(trip.date).toLocaleDateString("ar-SA", {
-          weekday: "long",
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        })}
+        رحلة: {trip.tripNumber} - {new Date(trip.date).toLocaleDateString()}
       </h1>
       <div className="mb-4">
         <p className="text-lg font-semibold">
@@ -225,6 +245,7 @@ const TripPage = () => {
             )}
         </p>
       </div>
+
       {/* Client Search Section */}
       <div className="mb-6">
         <h2 className="text-xl font-semibold mb-2">بحث عن عميل</h2>
@@ -239,25 +260,31 @@ const TripPage = () => {
         </div>
 
         {searchResults.length > 0 && (
-          <div className="bg-white shadow-lg rounded-lg p-2 max-h-60 overflow-auto">
+          <div className="bg-gradient-to-br from-white to-gray-50 shadow-xl rounded-xl p-4 max-h-72 overflow-auto">
             {searchResults.map((client) => (
               <div
                 key={client.id}
-                className="flex justify-between items-center p-2 border-b hover:bg-gray-100 cursor-pointer"
+                className="flex justify-between items-center p-3 mb-2 rounded-lg transition-all duration-300 ease-in-out hover:bg-gradient-to-r from-blue-50 to-purple-50 cursor-pointer border border-gray-200 relative overflow-hidden"
                 onClick={() => handleSelectClient(client)}
+                role="button"
+                tabIndex={0}
+                aria-label={`Select client ${client.name}`}
               >
-                <span>
-                  {client.name} - {client.identityNumber}
+                <span className="text-gray-700 font-medium z-10">
+                  {client.name} -{" "}
+                  <span className="text-gray-500">{client.identityNumber}</span>
                 </span>
-                <button className="text-blue-500">تحديد</button>
+                <button className="text-white bg-gradient-to-r from-blue-500 to-purple-600 px-4 py-2 rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-300 ease-in-out shadow-sm z-10">
+                  تحديد
+                </button>
               </div>
             ))}
           </div>
         )}
       </div>
+
       {/* Add Client Form */}
       <div className="p-6">
-        {/* Toggle Button */}
         <div className="text-center">
           <button
             onClick={toggleFormVisibility}
@@ -506,52 +533,50 @@ const TripPage = () => {
       {/* Clients List Section */}
       <div>
         <h2 className="text-xl font-semibold mb-4">قائمة العملاء</h2>
+        <button
+          onClick={exportToExcel}
+          className="bg-green-500 text-white px-4 py-2 rounded-lg mb-4"
+        >
+          تصدير إلى Excel
+        </button>
         <table className="w-full border">
           <thead>
             <tr className="bg-gray-100">
               <th className="border px-4 py-2">الاسم</th>
-              <th className="border px-4 py-2">عدد الأفراد</th>
-              <th className="border px-4 py-2">سعر الفرد</th>
-              <th className="border px-4 py-2">التكلفة الإجمالية</th>
-              <th className="border px-4 py-2">رقم الجوال</th>
               <th className="border px-4 py-2">رقم الهوية</th>
-              <th className="border px-4 py-2">الجنسية</th>
+              <th className="border px-4 py-2">رقم الجوال</th>
               <th className="border px-4 py-2">مكان الركوب</th>
-              <th className="border px-4 py-2">العودة</th>
             </tr>
           </thead>
           <tbody>
-            {trip.clients.map((client, index) => (
-              <tr key={index} className="hover:bg-gray-50 text-center">
+            {clients.flatMap((client) => [
+              <tr
+                key={client.client._id}
+                className="hover:bg-gray-50 text-center"
+              >
                 <td className="border px-4 py-2">{client.client.name}</td>
-                <td className="border px-4 py-2">
-                  {client.accompanyingPersons.length + 1}
-                </td>
-                <td className="border px-4 py-2">
-                  {/* Replace with actual price per person if available */}
-                  {client.totalCost / (client.accompanyingPersons.length + 1)}
-                </td>
-                <td className="border px-4 py-2">
-                  {/* Replace with actual total cost for this client if available */}
-                  {client.totalCost}
-                </td>
-                <td className="border px-4 py-2">{client.client.phone}</td>
                 <td className="border px-4 py-2">
                   {client.client.identityNumber}
                 </td>
-                <td className="border px-4 py-2">
-                  {client.client.nationality}
-                </td>
+                <td className="border px-4 py-2">{client.client.phone}</td>
                 <td className="border px-4 py-2">
                   {client.client.boardingLocation}
                 </td>
-                <td className="border px-4 py-2">
-                  {client.returnStatus === "نعم"
-                    ? formatDate(client.returnDate) // استخدام الدالة لتنسيق التاريخ
-                    : "لا يوجد"}
-                </td>
-              </tr>
-            ))}
+              </tr>,
+              ...client.accompanyingPersons.map((person, index) => (
+                <tr
+                  key={`${client.client._id}-${index}`}
+                  className="hover:bg-gray-50 text-center"
+                >
+                  <td className="border px-4 py-2">{person.name}</td>
+                  <td className="border px-4 py-2">{person.identityNumber}</td>
+                  <td className="border px-4 py-2">{client.client.phone}</td>
+                  <td className="border px-4 py-2">
+                    {client.client.boardingLocation}
+                  </td>
+                </tr>
+              )),
+            ])}
           </tbody>
         </table>
       </div>
