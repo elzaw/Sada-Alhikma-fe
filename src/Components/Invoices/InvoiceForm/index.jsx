@@ -17,11 +17,13 @@ const InvoiceForm = ({ onSubmit }) => {
   const [trips, setTrips] = useState([]);
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [tripData, setTripData] = useState(null);
 
   const selectedTripId = watch("trip")?.value;
   const selectedClientId = watch("client")?.value;
   const totalAmount = watch("totalAmount");
   const paidAmount = watch("paidAmount");
+  const selectedOption = watch("travelOption")?.value;
 
   // مراقبة التغييرات في totalAmount و paidAmount وحساب remainingAmount
   useEffect(() => {
@@ -80,12 +82,61 @@ const InvoiceForm = ({ onSubmit }) => {
     }
   }, [selectedTripId]);
 
+  const getTripData = async () => {
+    if (!selectedTripId || !selectedClientId) return;
+
+    try {
+      const response = await instance.get(
+        `/trips/trip/${selectedTripId}/client/${selectedClientId}`
+      );
+      setTripData(response.data);
+      console.log("Fetched Trip Data:", response.data);
+    } catch (error) {
+      console.error(
+        `Error fetching invoice for trip ${selectedTripId}:`,
+        error
+      );
+      setTripData(null);
+    }
+  };
+
+  useEffect(() => {
+    getTripData();
+  }, [selectedTripId, selectedClientId]);
+
+  useEffect(() => {
+    if (tripData && selectedClientId) {
+      // Find the client in the tripData.clients array
+      const selectedClient = tripData.clients.find(
+        (client) => client.client._id === selectedClientId
+      );
+
+      if (selectedClient) {
+        // Calculate the total number of people (client + accompanying persons)
+        const numberOfPeople =
+          (selectedClient.accompanyingPersons?.length || 0) + 1;
+
+        // Extract total cost from the client's trip data
+        const totalAmount = selectedClient.totalCost;
+
+        // Calculate cost per person
+        const costPerPerson = totalAmount / numberOfPeople;
+
+        // Update form fields
+        setValue("numberOfPeople", numberOfPeople);
+        setValue("costPerPerson", costPerPerson);
+        setValue("totalAmount", totalAmount);
+      }
+    }
+  }, [tripData, selectedClientId, setValue]);
+
   // تحديث بيانات العميل عند اختياره
   useEffect(() => {
     if (selectedClientId) {
       const selectedClient = clients.find(
         (client) => client.value === selectedClientId
       );
+
       if (selectedClient) {
         setValue("numberOfPeople", selectedClient.clientCount);
         setValue(
@@ -116,9 +167,18 @@ const InvoiceForm = ({ onSubmit }) => {
     }
   };
 
+  const travelOptions = [
+    { value: "oneWay", label: "ذهاب فقط" },
+    { value: "roundTrip", label: "ذهاب وعودة فقط" },
+    { value: "mecca", label: "مكة" },
+    { value: "meccaMedina", label: "مكة والمدينة" },
+    { value: "returnOnly", label: "عودة فقط" },
+    { value: "accommodationOnly", label: "تسكين فقط" },
+  ];
+
   return (
     <form onSubmit={handleSubmit(submitHandler)} className="p-6">
-      <h2 className="text-xl font-semibold mb-4">إنشاء فاتورة</h2>
+      <h2 className="text-xl font-semibold mb-4">إنشاء تذكرة</h2>
       <div className="grid grid-cols-2 gap-4">
         {/* قائمة الرحلات */}
         <div>
@@ -262,6 +322,48 @@ const InvoiceForm = ({ onSubmit }) => {
           )}
         </div>
 
+        <div className="grid grid-cols-1 gap-4">
+          <div>
+            <label className="block mb-1">الخيار</label>
+            <Controller
+              name="travelOption"
+              control={control}
+              rules={{ required: "هذا الحقل مطلوب" }}
+              render={({ field }) => (
+                <Select
+                  {...field}
+                  options={travelOptions}
+                  placeholder="اختر خيارًا"
+                />
+              )}
+            />
+          </div>
+        </div>
+        {selectedOption === "meccaMedina" && (
+          <>
+            <div>
+              <label className="block mb-1">تاريخ الذهاب إلى المدينة</label>
+              <input
+                type="date"
+                {...register("departureToMedina", {
+                  required: "هذا الحقل مطلوب",
+                })}
+                className="p-2 border rounded-lg w-full"
+              />
+            </div>
+            <div>
+              <label className="block mb-1">تاريخ العودة من المدينة</label>
+              <input
+                type="date"
+                {...register("returnFromMedina", {
+                  required: "هذا الحقل مطلوب",
+                })}
+                className="p-2 border rounded-lg w-full"
+              />
+            </div>
+          </>
+        )}
+
         {/* ملاحظات */}
         <div className="col-span-2">
           <label className="block mb-1">ملاحظات</label>
@@ -276,7 +378,7 @@ const InvoiceForm = ({ onSubmit }) => {
         type="submit"
         className="bg-green-500 text-white px-4 py-2 rounded-lg mt-4"
       >
-        إنشاء الفاتورة
+        إنشاء تذكرة
       </button>
     </form>
   );

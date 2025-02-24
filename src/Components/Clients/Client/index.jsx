@@ -22,66 +22,39 @@ const Client = () => {
     fetchClient();
   }, [id]);
 
-  const fetchInvoices = async () => {
+  useEffect(() => {
     if (!client?.bookings?.length) return;
-    setLoadingInvoices(true);
 
-    const invoicesData = {};
+    const fetchInvoices = async () => {
+      setLoadingInvoices(true);
 
-    for (const booking of client.bookings) {
-      // تحقق من هيكل booking لمعرفة مكان وجود tripId
-      const tripId = booking._id;
+      const invoicesData = {};
+      const fetchPromises = client.bookings.map(async (booking) => {
+        const tripId = booking._id;
 
-      console.log(tripId);
+        if (!tripId) {
+          console.warn("tripId is undefined for booking:", booking);
+          return;
+        }
 
-      if (!tripId) {
-        console.warn("tripId is undefined for booking:", booking);
-        continue;
-      }
+        try {
+          const response = await instance.get(
+            `/invoices/client/${id}/trip/${tripId}`
+          );
+          invoicesData[tripId] = response.data;
+        } catch (error) {
+          console.error(`Error fetching invoice for trip ${tripId}:`, error);
+          invoicesData[tripId] = null;
+        }
+      });
 
-      try {
-        const response = await instance.get(
-          `/invoices/client/${id}/trip/${tripId}`
-        );
-        invoicesData[tripId] = response.data;
-      } catch (error) {
-        console.error(`Error fetching invoice for trip ${tripId}:`, error);
-        invoicesData[tripId] = null;
-      }
-    }
-
-    // ✅ Use Functional State Update to Avoid Overwriting
-    setInvoices((prevInvoices) => ({ ...prevInvoices, ...invoicesData }));
-    setLoadingInvoices(false);
-  };
-
-  useEffect(() => {
-    if (client?.bookings?.length) {
-      fetchInvoices();
-    }
-  }, [client, id]);
-
-  useEffect(() => {
-    async function fetchInvoices() {
-      try {
-        const response = await fetch(`/api/invoices`);
-        const data = await response.json();
-        console.log("Fetched invoices data:", data);
-
-        const invoiceMap = {};
-        data.forEach((invoice) => {
-          invoiceMap[invoice.trip] = invoice; // Use `trip` as the key
-        });
-
-        setInvoices(invoiceMap);
-        console.log("Updated invoices state:", invoiceMap);
-      } catch (error) {
-        console.error("Error fetching invoices:", error);
-      }
-    }
+      await Promise.all(fetchPromises);
+      setInvoices((prev) => ({ ...prev, ...invoicesData }));
+      setLoadingInvoices(false);
+    };
 
     fetchInvoices();
-  }, []);
+  }, [client, id]);
 
   if (!client) {
     return <div>Loading...</div>;
@@ -117,11 +90,6 @@ const Client = () => {
           <ul className="space-y-4">
             {client.bookings.map((booking) => {
               const tripId = booking?._id;
-
-              console.log("tripId:", tripId);
-              console.log("Invoices object:", invoices);
-              console.log("Resolved invoice:", invoices[tripId]);
-
               return (
                 <li key={tripId} className="p-4 border rounded-lg">
                   <p>
@@ -144,14 +112,15 @@ const Client = () => {
                     <strong>صافي المبلغ:</strong> {booking.totalTripNetAmount}
                   </p>
 
-                {/* عرض الفاتورة أو رسالة "لا يوجد" */}
-                {invoices[booking._id] ? (
-                  <InvoicePreview booking={invoices[booking._id]} />
-                ) : (
-                  <p className="text-red-500">لا يوجد فاتورة لهذه الرحلة.</p>
-                )}
-              </li>
-            ))}
+                  {/* عرض الفاتورة أو رسالة "لا يوجد" */}
+                  {invoices[tripId] ? (
+                    <InvoicePreview booking={invoices[tripId]} />
+                  ) : (
+                    <p className="text-red-500">لا يوجد فاتورة لهذه الرحلة.</p>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         ) : (
           <p>لا توجد حجوزات لهذا العميل.</p>

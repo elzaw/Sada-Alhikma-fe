@@ -2,8 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import instance from "../../../API/instance";
 import toast from "react-hot-toast";
-import * as XLSX from "xlsx"; // Import xlsx library
-
+// import * as XLSX from "xlsx"; // Import xlsx library
+import * as XLSX from "xlsx-js-style";
 const TripPage = () => {
   const { tripId } = useParams();
   const [trip, setTrip] = useState(null);
@@ -155,11 +155,171 @@ const TripPage = () => {
 
   // Export to Excel
   // Export to Excel with formatting
-  const exportToExcel = () => {
-    const data = clients.flatMap((client) => {
+  // دالة تصدير كشف الشرطة
+  const exportPoliceSheet = () => {
+    // بيانات الرحلة
+    const tripDate = new Date(trip.date).toLocaleDateString(); // تاريخ الرحلة
+    const leasingCompany = trip.leasingCompany; // اسم الشركة المؤجرة
+    const rentingCompany = trip.rentingCompany; // اسم الشركة المستأجرة
+
+    // بيانات السائقين
+    const drivers = trip.drivers.map((driver) => ({
+      name: driver.driverName,
+      idNumber: driver.driverId,
+      phone: driver.driverPhone,
+    }));
+
+    // بيانات الباص
+    const busDetails = {
+      busNumber: trip.busDetails.busNumber,
+      plateNumber: trip.busDetails.licensePlate,
+      seatCount: trip.busDetails.seatCount,
+      departureLocation: trip.busDetails.departureLocation,
+      destinationLocation: trip.busDetails.destination,
+    };
+
+    // بيانات العملاء (يتم استخراجها من clients)
+    const clientsData = clients.flatMap((client) => {
       const clientData = [
         {
-          الاسم: client.client.name,
+          "اسم العميل": client.client.name,
+          "رقم الهوية/الإقامة": client.client.identityNumber,
+          الجنسية: client.client.nationality,
+          "مكان الركوب": client.client.boardingLocation,
+        },
+      ];
+
+      const accompanyingPersonsData = client.accompanyingPersons.map(
+        (person) => ({
+          "اسم العميل": person.name,
+          "رقم الهوية/الإقامة": person.identityNumber,
+          الجنسية: person.nationality,
+          "مكان الركوب": client.client.boardingLocation,
+        })
+      );
+
+      return [...clientData, ...accompanyingPersonsData];
+    });
+
+    // إنشاء مصفوفة بيانات كشف الشرطة
+    const policeSheetData = [
+      ["كشف الشرطة"], // العنوان الرئيسي
+      [], // سطر فارغ
+      ["الشركة المستأجرة"], // عنوان الشركة المستأجرة
+      ["مؤسسة صدي الحكمة للخدمات التسويقية"], // اسم الشركة
+      ["س.ت: 5855356045"], // السجل التجاري
+      [], // سطر فارغ
+      ["تاريخ الرحلة", tripDate],
+      ["اسم الشركة المؤجرة", leasingCompany],
+      ["اسم الشركة المستأجرة", rentingCompany],
+      [], // سطر فارغ
+      ["بيانات السائقين"],
+      ["اسم السائق الأول", drivers[0]?.name || "غير متوفر"],
+      ["رقم إقامة/حدود السائق الأول", drivers[0]?.idNumber || "غير متوفر"],
+      ["رقم جوال السائق الأول", drivers[0]?.phone || "غير متوفر"],
+      ["اسم السائق الثاني", drivers[1]?.name || "غير متوفر"],
+      ["رقم إقامة/حدود السائق الثاني", drivers[1]?.idNumber || "غير متوفر"],
+      ["رقم جوال السائق الثاني", drivers[1]?.phone || "غير متوفر"],
+      [], // سطر فارغ
+      ["بيانات الباص"],
+      ["رقم الباص", busDetails.busNumber],
+      ["رقم اللوحات", busDetails.plateNumber],
+      ["عدد المقاعد", busDetails.seatCount],
+      ["مكان الانطلاق", busDetails.departureLocation],
+      ["الوجهة", busDetails.destinationLocation],
+      [], // سطر فارغ
+      ["كشف العملاء"],
+      ["اسم العميل", "رقم الهوية/الإقامة", "الجنسية", "مكان الركوب"],
+      ...clientsData.map((client) => [
+        client["اسم العميل"],
+        client["رقم الهوية/الإقامة"],
+        client["الجنسية"],
+        client["مكان الركوب"],
+      ]),
+      [], // سطر فارغ
+      ["المدير العام", "", "", ""],
+      ["", "", "", "ختم المؤسسة"],
+    ];
+
+    // إنشاء مصنف Excel
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(policeSheetData);
+
+    // تعريف الأنماط
+    const titleStyle = {
+      font: { bold: true, size: 16, color: { rgb: "000000" } }, // خط عريض، حجم كبير
+      alignment: { horizontal: "center" }, // توسيط النص
+    };
+
+    const companyHeaderStyle = {
+      font: { bold: true, size: 14, color: { rgb: "000000" } }, // خط عريض، حجم متوسط
+      alignment: { horizontal: "right" }, // محاذاة لليمين
+    };
+
+    const headerStyle = {
+      font: { bold: true, color: { rgb: "FFFFFF" } }, // خط عريض، لون أبيض
+      fill: { fgColor: { rgb: "4F81BD" } }, // خلفية زرقاء
+      alignment: { horizontal: "center" }, // توسيط النص
+      border: {
+        top: { style: "thin", color: { rgb: "000000" } },
+        bottom: { style: "thin", color: { rgb: "000000" } },
+        left: { style: "thin", color: { rgb: "000000" } },
+        right: { style: "thin", color: { rgb: "000000" } },
+      },
+    };
+
+    const cellStyle = {
+      alignment: { horizontal: "center" }, // توسيط النص
+      border: {
+        top: { style: "thin", color: { rgb: "000000" } },
+        bottom: { style: "thin", color: { rgb: "000000" } },
+        left: { style: "thin", color: { rgb: "000000" } },
+        right: { style: "thin", color: { rgb: "000000" } },
+      },
+    };
+
+    // تطبيق الأنماط
+    const range = XLSX.utils.decode_range(ws["!ref"]); // الحصول على نطاق الورقة
+
+    // تطبيق نمط العنوان الرئيسي
+    ws["A1"].s = titleStyle;
+    XLSX.utils.sheet_add_aoa(ws, [["كشف الشرطة"]], { origin: "A1" });
+
+    // تطبيق نمط عنوان الشركة المستأجرة
+    ws["A3"].s = companyHeaderStyle;
+    ws["A4"].s = companyHeaderStyle;
+    ws["A5"].s = companyHeaderStyle;
+
+    // تطبيق نمط العناوين
+    for (let C = range.s.c; C <= range.e.c; ++C) {
+      const cellAddress = XLSX.utils.encode_cell({ r: 10, c: C }); // الصف 11 (عناوين السائقين)
+      if (!ws[cellAddress]) ws[cellAddress] = {};
+      ws[cellAddress].s = headerStyle;
+    }
+
+    // تطبيق نمط الخلايا
+    for (let R = range.s.r; R <= range.e.r; ++R) {
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+        if (!ws[cellAddress]) ws[cellAddress] = {};
+        ws[cellAddress].s = cellStyle;
+      }
+    }
+
+    // إضافة الورقة إلى المصنف
+    XLSX.utils.book_append_sheet(wb, ws, "كشف الشرطة");
+
+    // حفظ الملف
+    XLSX.writeFile(wb, `كشف الشرطة - ${trip.tripNumber}.xlsx`);
+  };
+  // دالة تصدير كشف الرحلة
+  // دالة تصدير كشف الرحلة مع التنسيقات
+  const exportTripSheet = () => {
+    // بيانات العملاء (يتم استخراجها من clients)
+    const clientsData = clients.flatMap((client) => {
+      const clientData = [
+        {
+          "اسم العميل": client.client.name,
           "رقم الهوية": client.client.identityNumber,
           "رقم الجوال": client.client.phone,
           "مكان الركوب": client.client.boardingLocation,
@@ -168,9 +328,9 @@ const TripPage = () => {
 
       const accompanyingPersonsData = client.accompanyingPersons.map(
         (person) => ({
-          الاسم: person.name,
+          "اسم العميل": person.name,
           "رقم الهوية": person.identityNumber,
-          "رقم الجوال": client.client.phone, // نفس رقم هاتف العميل
+          "رقم الجوال": client.client.phone, // نفس رقم جوال العميل
           "مكان الركوب": client.client.boardingLocation,
         })
       );
@@ -178,47 +338,78 @@ const TripPage = () => {
       return [...clientData, ...accompanyingPersonsData];
     });
 
-    // Create a new workbook
+    // إنشاء مصفوفة بيانات كشف الرحلة
+    const tripSheetData = [
+      ["كشف الرحلة"], // العنوان الرئيسي
+      [], // سطر فارغ
+      ["اسم العميل", "رقم الهوية", "رقم الجوال", "مكان الركوب"], // العناوين
+      ...clientsData.map((client) => [
+        client["اسم العميل"],
+        client["رقم الهوية"],
+        client["رقم الجوال"],
+        client["مكان الركوب"],
+      ]),
+    ];
+
+    // إنشاء مصنف Excel
     const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(tripSheetData);
 
-    // Convert data to worksheet
-    const ws = XLSX.utils.json_to_sheet(data);
-
-    // Add styles to the worksheet
+    // تعريف الأنماط
     const headerStyle = {
-      font: { bold: true, color: { rgb: "FFFFFF" } },
-      fill: { fgColor: { rgb: "4F81BD" } }, // لون خلفية العنوان
-      alignment: { horizontal: "center" },
+      font: { bold: true, color: { rgb: "FFFFFF" } }, // خط عريض، لون أبيض
+      fill: { fgColor: { rgb: "4F81BD" } }, // خلفية زرقاء
+      alignment: { horizontal: "center" }, // توسيط النص
+      border: {
+        top: { style: "thin", color: { rgb: "000000" } },
+        bottom: { style: "thin", color: { rgb: "000000" } },
+        left: { style: "thin", color: { rgb: "000000" } },
+        right: { style: "thin", color: { rgb: "000000" } },
+      },
     };
 
-    // Apply header style
-    const range = XLSX.utils.decode_range(ws["!ref"]);
+    const titleStyle = {
+      font: { bold: true, size: 16, color: { rgb: "000000" } }, // خط عريض، حجم كبير
+      alignment: { horizontal: "center" }, // توسيط النص
+    };
+
+    const cellStyle = {
+      alignment: { horizontal: "center" }, // توسيط النص
+      border: {
+        top: { style: "thin", color: { rgb: "000000" } },
+        bottom: { style: "thin", color: { rgb: "000000" } },
+        left: { style: "thin", color: { rgb: "000000" } },
+        right: { style: "thin", color: { rgb: "000000" } },
+      },
+    };
+
+    // تطبيق الأنماط
+    const range = XLSX.utils.decode_range(ws["!ref"]); // الحصول على نطاق الورقة
+
+    // تطبيق نمط العنوان الرئيسي
+    ws["A1"].s = titleStyle;
+    XLSX.utils.sheet_add_aoa(ws, [["كشف الرحلة"]], { origin: "A1" });
+
+    // تطبيق نمط العناوين
     for (let C = range.s.c; C <= range.e.c; ++C) {
-      const cellAddress = XLSX.utils.encode_cell({ r: range.s.r, c: C });
-      if (!ws[cellAddress]) continue;
+      const cellAddress = XLSX.utils.encode_cell({ r: 2, c: C }); // الصف الثالث (العناوين)
+      if (!ws[cellAddress]) ws[cellAddress] = {};
       ws[cellAddress].s = headerStyle;
     }
 
-    // Add borders to all cells
+    // تطبيق نمط الخلايا
     for (let R = range.s.r; R <= range.e.r; ++R) {
       for (let C = range.s.c; C <= range.e.c; ++C) {
         const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
         if (!ws[cellAddress]) ws[cellAddress] = {};
-        ws[cellAddress].s = {
-          border: {
-            top: { style: "thin", color: { rgb: "000000" } },
-            bottom: { style: "thin", color: { rgb: "000000" } },
-            left: { style: "thin", color: { rgb: "000000" } },
-            right: { style: "thin", color: { rgb: "000000" } },
-          },
-        };
+        ws[cellAddress].s = cellStyle;
       }
     }
 
-    // Add worksheet to workbook
-    XLSX.utils.book_append_sheet(wb, ws, "الرحلة");
+    // إضافة الورقة إلى المصنف
+    XLSX.utils.book_append_sheet(wb, ws, "كشف الرحلة");
 
-    // Write file
+    // حفظ الملف
     XLSX.writeFile(wb, `كشف الرحلة - ${trip.tripNumber}.xlsx`);
   };
 
@@ -263,7 +454,7 @@ const TripPage = () => {
           <div className="bg-gradient-to-br from-white to-gray-50 shadow-xl rounded-xl p-4 max-h-72 overflow-auto">
             {searchResults.map((client) => (
               <div
-                key={client.id}
+                key={client._id}
                 className="flex justify-between items-center p-3 mb-2 rounded-lg transition-all duration-300 ease-in-out hover:bg-gradient-to-r from-blue-50 to-purple-50 cursor-pointer border border-gray-200 relative overflow-hidden"
                 onClick={() => handleSelectClient(client)}
                 role="button"
@@ -533,12 +724,20 @@ const TripPage = () => {
       {/* Clients List Section */}
       <div>
         <h2 className="text-xl font-semibold mb-4">قائمة العملاء</h2>
-        <button
-          onClick={exportToExcel}
-          className="bg-green-500 text-white px-4 py-2 rounded-lg mb-4"
-        >
-          تصدير إلى Excel
-        </button>
+        <div className="flex gap-4 mb-6">
+          <button
+            onClick={exportTripSheet}
+            className="bg-blue-500 text-white px-4 py-2 rounded-lg"
+          >
+            تصدير كشف الرحلة
+          </button>
+          <button
+            onClick={exportPoliceSheet}
+            className="bg-green-500 text-white px-4 py-2 rounded-lg"
+          >
+            تصدير كشف الشرطة
+          </button>
+        </div>
         <table className="w-full border">
           <thead>
             <tr className="bg-gray-100">
@@ -579,6 +778,24 @@ const TripPage = () => {
             ])}
           </tbody>
         </table>
+
+        {/* Display totalCost, totalPaid, and netAmount */}
+        <div className="mt-6 p-4 bg-gray-50 rounded-lg shadow-sm">
+          <div className="grid grid-cols-3 gap-4">
+            <div className="text-center">
+              <p className="text-lg font-semibold">التكلفة الإجمالية</p>
+              <p className="text-gray-700">{trip.totalCost} ريال</p>
+            </div>
+            <div className="text-center">
+              <p className="text-lg font-semibold">المبلغ المدفوع</p>
+              <p className="text-gray-700">{trip.totalPaid} ريال</p>
+            </div>
+            <div className="text-center">
+              <p className="text-lg font-semibold">المبلغ المتبقي</p>
+              <p className="text-gray-700">{trip.netAmount} ريال</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
