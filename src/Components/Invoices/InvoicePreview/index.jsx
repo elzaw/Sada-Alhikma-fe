@@ -112,15 +112,9 @@ const InvoicePreview = ({ booking }) => {
                 booking.date
               ).toLocaleDateString()}</p>
               <p><strong>شركة التأجير:</strong> ${booking.leasingCompany}</p>
-              <p><strong>تكلفة الرحلة:</strong> ${
-                booking.totalTripCost
-              } ريال</p>
-              <p><strong>المبلغ المدفوع:</strong> ${
-                booking.totalTripPaid
-              } ريال</p>
-              <p><strong>صافي المبلغ:</strong> ${
-                booking.totalTripNetAmount
-              } ريال</p>
+              <p><strong>تكلفة الرحلة:</strong> ${booking.totalAmount} ريال</p>
+              <p><strong>المبلغ المدفوع:</strong> ${booking.paidAmount} ريال</p>
+              <p><strong>الباقي:</strong> ${booking.remainingAmount} ريال</p>
             </div>
             <div class="invoice-footer">
               <img src="https://via.placeholder.com/100x50?text=شعار+الشركة" alt="شعار الشركة" />

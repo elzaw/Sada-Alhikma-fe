@@ -29,7 +29,11 @@ const Client = () => {
     const invoicesData = {};
 
     for (const booking of client.bookings) {
-      const tripId = booking?._id; // Ensure correct tripId
+      // تحقق من هيكل booking لمعرفة مكان وجود tripId
+      const tripId = booking._id;
+
+      console.log(tripId);
+
       if (!tripId) {
         console.warn("tripId is undefined for booking:", booking);
         continue;
@@ -140,15 +144,14 @@ const Client = () => {
                     <strong>صافي المبلغ:</strong> {booking.totalTripNetAmount}
                   </p>
 
-                  {/* عرض الفاتورة أو رسالة "لا يوجد" */}
-                  {invoices[tripId] ? (
-                    <InvoicePreview booking={invoices[tripId]} />
-                  ) : (
-                    <p className="text-red-500">لا يوجد فاتورة لهذه الرحلة.</p>
-                  )}
-                </li>
-              );
-            })}
+                {/* عرض الفاتورة أو رسالة "لا يوجد" */}
+                {invoices[booking._id] ? (
+                  <InvoicePreview booking={invoices[booking._id]} />
+                ) : (
+                  <p className="text-red-500">لا يوجد فاتورة لهذه الرحلة.</p>
+                )}
+              </li>
+            ))}
           </ul>
         ) : (
           <p>لا توجد حجوزات لهذا العميل.</p>
