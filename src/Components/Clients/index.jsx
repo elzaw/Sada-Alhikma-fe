@@ -2,13 +2,16 @@ import React, { useEffect, useState } from "react";
 import AddClientForm from "./AddClient";
 import instance from "../../API/instance";
 import { useNavigate } from "react-router-dom"; // Import useNavigate
+import { Modal, Button, Checkbox } from "@mui/material";
 
 const Clients = () => {
   const [showForm, setShowForm] = useState(false);
   const [clients, setClients] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const navigate = useNavigate(); // Initialize useNavigate
-
+  const [selectedClients, setSelectedClients] = useState([]);
+  const [message, setMessage] = useState("");
+  const [openModal, setOpenModal] = useState(false);
+  const navigate = useNavigate();
   // Fetch clients from API
   const fetchClients = async () => {
     try {
@@ -46,6 +49,55 @@ const Clients = () => {
     navigate(`/client/${clientId}`); // Navigate to the client page
   };
 
+  const handleSelectClient = (phone) => {
+    setSelectedClients((prev) =>
+      prev.includes(phone) ? prev.filter((p) => p !== phone) : [...prev, phone]
+    );
+  };
+
+  const handleSendWhatsApp = async () => {
+    if (!selectedClients.length || !message) {
+      alert("Please select clients and enter a message.");
+      return;
+    }
+
+    try {
+      let response;
+      if (selectedClients.length === 1) {
+        // Send a single WhatsApp message
+        response = await instance.post("/clients/send-whatsapp", {
+          phone: selectedClients[0],
+          message,
+        });
+      } else {
+        // Send bulk WhatsApp messages
+        response = await instance.post("/clients/send-bulk-whatsapp", {
+          phones: selectedClients,
+          message,
+        });
+      }
+
+      if (response.data.success) {
+        alert(response.data.message); // Show success message
+      } else {
+        throw new Error("Failed to send messages via WhatsApp.");
+      }
+    } catch (error) {
+      console.error("Error sending WhatsApp messages:", error.message);
+      alert("Failed to send messages. Falling back to WhatsApp Web...");
+
+      // Fallback to WhatsApp Web
+      selectedClients.forEach((phone, index) => {
+        setTimeout(() => {
+          const whatsappLink = `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(
+            message
+          )}`;
+          window.open(whatsappLink, "_blank");
+        }, index * 1000); // Delay each window opening by 1 second
+      });
+    }
+  };
+
   return (
     <>
       <div className="my-4 flex justify-center gap-4">
@@ -55,12 +107,16 @@ const Clients = () => {
         >
           إضافة عميل جديد
         </button>
+        <button
+          onClick={() => setOpenModal(true)}
+          className="bg-green-500 text-white px-4 py-2 rounded-lg"
+        >
+          إرسال رسالة واتساب
+        </button>
       </div>
 
       <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-lg">
         <h1 className="text-2xl font-bold mb-4">قائمة العملاء</h1>
-
-        {/* Search Input */}
         <div className="mb-4">
           <input
             type="search"
@@ -70,12 +126,11 @@ const Clients = () => {
             className="w-full px-3 py-2 border rounded-lg"
           />
         </div>
-
-        {/* Clients Table */}
         <div className="overflow-x-auto">
           <table className="min-w-full bg-white border border-gray-300 rounded-lg">
             <thead>
               <tr className="bg-gray-100">
+                <th className="border px-4 py-2">تحديد</th>
                 <th className="border px-4 py-2">الاسم</th>
                 <th className="border px-4 py-2">رقم الجوال</th>
                 <th className="border px-4 py-2">الجنسية</th>
@@ -86,6 +141,11 @@ const Clients = () => {
             <tbody>
               {filteredClients.map((client) => (
                 <tr key={client._id} className="hover:bg-gray-50">
+                  <td className="border px-4 py-2 text-center">
+                    <Checkbox
+                      onChange={() => handleSelectClient(client.phone)}
+                    />
+                  </td>
                   <td className="border px-4 py-2">{client.name}</td>
                   <td className="border px-4 py-2">{client.phone}</td>
                   <td className="border px-4 py-2">{client.nationality}</td>
@@ -97,7 +157,7 @@ const Clients = () => {
               ))}
               {filteredClients.length === 0 && (
                 <tr>
-                  <td colSpan="5" className="text-center py-4">
+                  <td colSpan="6" className="text-center py-4">
                     لا توجد بيانات مطابقة.
                   </td>
                 </tr>
@@ -106,6 +166,29 @@ const Clients = () => {
           </table>
         </div>
       </div>
+      <Modal open={openModal} onClose={() => setOpenModal(false)}>
+        <div className="bg-white p-6 rounded-lg shadow-lg max-w-md mx-auto mt-20">
+          <h2 className="text-xl font-bold mb-4">Send WhatsApp Message</h2>
+          <textarea
+            className="w-full p-2 border rounded-lg"
+            placeholder="Type your message here..."
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+          />
+          <div className="mt-4 flex justify-end space-x-2">
+            <Button variant="outlined" onClick={() => setOpenModal(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              color="success"
+              onClick={handleSendWhatsApp}
+            >
+              Send
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Clients Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
