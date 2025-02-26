@@ -11,6 +11,7 @@ const Clients = () => {
   const [selectedClients, setSelectedClients] = useState([]);
   const [message, setMessage] = useState("");
   const [openModal, setOpenModal] = useState(false);
+  const [file, setFile] = useState(null);
   const navigate = useNavigate();
   // Fetch clients from API
   const fetchClients = async () => {
@@ -98,6 +99,38 @@ const Clients = () => {
     }
   };
 
+  // Handle file input change
+  const handleFileChange = (e) => {
+    setFile(e.target.files[0]);
+  };
+
+  // Handle file upload
+  const handleFileUpload = async () => {
+    if (!file) {
+      alert("Please select a file.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const response = await instance.post("/clients/upload", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      if (response.data.success) {
+        alert("File uploaded successfully!");
+        fetchClients(); // Refresh clients list
+      } else {
+        alert("Failed to upload file.");
+      }
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      alert("Failed to upload file.");
+    }
+  };
   return (
     <>
       <div className="my-4 flex justify-center gap-4">
@@ -112,6 +145,25 @@ const Clients = () => {
           className="bg-green-500 text-white px-4 py-2 rounded-lg"
         >
           إرسال رسالة واتساب
+        </button>
+        <input
+          type="file"
+          accept=".csv, .xlsx, .xls"
+          onChange={handleFileChange}
+          className="hidden"
+          id="fileInput"
+        />
+        <label
+          htmlFor="fileInput"
+          className="bg-purple-500 text-white px-4 py-2 rounded-lg cursor-pointer"
+        >
+          Upload Excel/CSV
+        </label>
+        <button
+          onClick={handleFileUpload}
+          className="bg-purple-700 text-white px-4 py-2 rounded-lg"
+        >
+          Upload
         </button>
       </div>
 
