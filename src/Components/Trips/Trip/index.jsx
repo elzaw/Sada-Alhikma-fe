@@ -157,19 +157,16 @@ const TripPage = () => {
   // Export to Excel with formatting
   // دالة تصدير كشف الشرطة
   const exportPoliceSheet = () => {
-    // بيانات الرحلة
-    const tripDate = new Date(trip.date).toLocaleDateString(); // تاريخ الرحلة
-    const leasingCompany = trip.leasingCompany; // اسم الشركة المؤجرة
-    const rentingCompany = trip.rentingCompany; // اسم الشركة المستأجرة
+    const tripDate = new Date(trip.date).toLocaleDateString();
+    const leasingCompany = trip.leasingCompany;
+    const rentingCompany = trip.rentingCompany;
 
-    // بيانات السائقين
     const drivers = trip.drivers.map((driver) => ({
       name: driver.driverName,
       idNumber: driver.driverId,
       phone: driver.driverPhone,
     }));
 
-    // بيانات الباص
     const busDetails = {
       busNumber: trip.busDetails.busNumber,
       plateNumber: trip.busDetails.licensePlate,
@@ -178,140 +175,106 @@ const TripPage = () => {
       destinationLocation: trip.busDetails.destination,
     };
 
-    // بيانات العملاء (يتم استخراجها من clients)
-    const clientsData = clients.flatMap((client) => {
-      const clientData = [
+    const clientsData = clients.flatMap((client, index) => {
+      const side = index % 2 === 0 ? "right" : "left";
+      return [
         {
+          side,
           "اسم العميل": client.client.name,
           "رقم الهوية/الإقامة": client.client.identityNumber,
           الجنسية: client.client.nationality,
           "مكان الركوب": client.client.boardingLocation,
         },
-      ];
-
-      const accompanyingPersonsData = client.accompanyingPersons.map(
-        (person) => ({
+        ...client.accompanyingPersons.map((person) => ({
+          side,
           "اسم العميل": person.name,
           "رقم الهوية/الإقامة": person.identityNumber,
           الجنسية: person.nationality,
           "مكان الركوب": client.client.boardingLocation,
-        })
-      );
-
-      return [...clientData, ...accompanyingPersonsData];
+        })),
+      ];
     });
 
-    // إنشاء مصفوفة بيانات كشف الشرطة
     const policeSheetData = [
-      ["كشف الشرطة"], // العنوان الرئيسي
-      [], // سطر فارغ
-      ["الشركة المستأجرة"], // عنوان الشركة المستأجرة
-      ["مؤسسة صدي الحكمة للخدمات التسويقية"], // اسم الشركة
-      ["س.ت: 5855356045"], // السجل التجاري
-      [], // سطر فارغ
-      ["تاريخ الرحلة", tripDate],
-      ["اسم الشركة المؤجرة", leasingCompany],
-      ["اسم الشركة المستأجرة", rentingCompany],
-      [], // سطر فارغ
-      ["بيانات السائقين"],
-      ["اسم السائق الأول", drivers[0]?.name || "غير متوفر"],
-      ["رقم إقامة/حدود السائق الأول", drivers[0]?.idNumber || "غير متوفر"],
-      ["رقم جوال السائق الأول", drivers[0]?.phone || "غير متوفر"],
-      ["اسم السائق الثاني", drivers[1]?.name || "غير متوفر"],
-      ["رقم إقامة/حدود السائق الثاني", drivers[1]?.idNumber || "غير متوفر"],
-      ["رقم جوال السائق الثاني", drivers[1]?.phone || "غير متوفر"],
-      [], // سطر فارغ
-      ["بيانات الباص"],
-      ["رقم الباص", busDetails.busNumber],
-      ["رقم اللوحات", busDetails.plateNumber],
-      ["عدد المقاعد", busDetails.seatCount],
-      ["مكان الانطلاق", busDetails.departureLocation],
-      ["الوجهة", busDetails.destinationLocation],
-      [], // سطر فارغ
+      ["الشركة المستأجرة :", "", "الشركة الناقلة  / " + rentingCompany],
+      [leasingCompany, "", "رقم الباص: " + busDetails.busNumber],
+      ["س.ت: 5855356045", "", "ا س س " + busDetails.plateNumber],
+      ["", "", ""],
+      [
+        "الانطلاق: " + busDetails.departureLocation,
+        "",
+        "اسم السائق1: " + (drivers[0]?.name || "غير متوفر"),
+      ],
+      [
+        "الوجهة: " + busDetails.destinationLocation,
+        "",
+        "جوال السائق: " + (drivers[0]?.phone || "غير متوفر"),
+      ],
+      ["", "", "رقم الهوية : " + (drivers[0]?.idNumber || "غير متوفر")],
+      ["", "", "اسم السائق2: " + (drivers[1]?.name || "غير متوفر")],
+      ["", "", "جوال السائق: " + (drivers[1]?.phone || "غير متوفر")],
+      ["", "", "رقم الهوية : " + (drivers[1]?.idNumber || "غير متوفر")],
+      ["", "", ""],
+      ["تاريخ الرحلة: " + tripDate, "", "الخميس"],
+      ["", "", ""],
       ["كشف العملاء"],
-      ["اسم العميل", "رقم الهوية/الإقامة", "الجنسية", "مكان الركوب"],
-      ...clientsData.map((client) => [
-        client["اسم العميل"],
-        client["رقم الهوية/الإقامة"],
-        client["الجنسية"],
-        client["مكان الركوب"],
-      ]),
-      [], // سطر فارغ
-      ["المدير العام", "", "", ""],
-      ["", "", "", "ختم المؤسسة"],
+      [
+        "اسم العميل",
+        "رقم الهوية/الإقامة",
+        "الجنسية",
+        "مكان الركوب",
+        "",
+        "اسم العميل",
+        "رقم الهوية/الإقامة",
+        "الجنسية",
+        "مكان الركوب",
+      ],
+      ...clientsData.reduce((rows, client, index) => {
+        if (client.side === "right") {
+          rows.push([
+            client["اسم العميل"],
+            client["رقم الهوية/الإقامة"],
+            client["الجنسية"],
+            client["مكان الركوب"],
+            "",
+            "",
+            "",
+            "",
+            "",
+          ]);
+        } else {
+          rows[rows.length - 1].splice(
+            5,
+            4,
+            client["اسم العميل"],
+            client["رقم الهوية/الإقامة"],
+            client["الجنسية"],
+            client["مكان الركوب"]
+          );
+        }
+        return rows;
+      }, []),
     ];
 
-    // إنشاء مصنف Excel
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(policeSheetData);
 
-    // تعريف الأنماط
-    const titleStyle = {
-      font: { bold: true, size: 16, color: { rgb: "000000" } }, // خط عريض، حجم كبير
-      alignment: { horizontal: "center" }, // توسيط النص
-    };
+    ws["!cols"] = [
+      { wch: 25 },
+      { wch: 5 },
+      { wch: 30 },
+      { wch: 20 },
+      { wch: 5 },
+      { wch: 25 },
+      { wch: 20 },
+      { wch: 20 },
+      { wch: 20 },
+    ];
 
-    const companyHeaderStyle = {
-      font: { bold: true, size: 14, color: { rgb: "000000" } }, // خط عريض، حجم متوسط
-      alignment: { horizontal: "right" }, // محاذاة لليمين
-    };
-
-    const headerStyle = {
-      font: { bold: true, color: { rgb: "FFFFFF" } }, // خط عريض، لون أبيض
-      fill: { fgColor: { rgb: "4F81BD" } }, // خلفية زرقاء
-      alignment: { horizontal: "center" }, // توسيط النص
-      border: {
-        top: { style: "thin", color: { rgb: "000000" } },
-        bottom: { style: "thin", color: { rgb: "000000" } },
-        left: { style: "thin", color: { rgb: "000000" } },
-        right: { style: "thin", color: { rgb: "000000" } },
-      },
-    };
-
-    const cellStyle = {
-      alignment: { horizontal: "center" }, // توسيط النص
-      border: {
-        top: { style: "thin", color: { rgb: "000000" } },
-        bottom: { style: "thin", color: { rgb: "000000" } },
-        left: { style: "thin", color: { rgb: "000000" } },
-        right: { style: "thin", color: { rgb: "000000" } },
-      },
-    };
-
-    // تطبيق الأنماط
-    const range = XLSX.utils.decode_range(ws["!ref"]); // الحصول على نطاق الورقة
-
-    // تطبيق نمط العنوان الرئيسي
-    ws["A1"].s = titleStyle;
-    XLSX.utils.sheet_add_aoa(ws, [["كشف الشرطة"]], { origin: "A1" });
-
-    // تطبيق نمط عنوان الشركة المستأجرة
-    ws["A3"].s = companyHeaderStyle;
-    ws["A4"].s = companyHeaderStyle;
-    ws["A5"].s = companyHeaderStyle;
-
-    // تطبيق نمط العناوين
-    for (let C = range.s.c; C <= range.e.c; ++C) {
-      const cellAddress = XLSX.utils.encode_cell({ r: 10, c: C }); // الصف 11 (عناوين السائقين)
-      if (!ws[cellAddress]) ws[cellAddress] = {};
-      ws[cellAddress].s = headerStyle;
-    }
-
-    // تطبيق نمط الخلايا
-    for (let R = range.s.r; R <= range.e.r; ++R) {
-      for (let C = range.s.c; C <= range.e.c; ++C) {
-        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-        if (!ws[cellAddress]) ws[cellAddress] = {};
-        ws[cellAddress].s = cellStyle;
-      }
-    }
-
-    // إضافة الورقة إلى المصنف
     XLSX.utils.book_append_sheet(wb, ws, "كشف الشرطة");
-
-    // حفظ الملف
     XLSX.writeFile(wb, `كشف الشرطة - ${trip.tripNumber}.xlsx`);
   };
+
   // دالة تصدير كشف الرحلة
   // دالة تصدير كشف الرحلة مع التنسيقات
   const exportTripSheet = () => {
