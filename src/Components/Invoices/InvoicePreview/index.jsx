@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import instance from "../../../API/instance";
+import ReactDOMServer from "react-dom/server"; // For rendering the component to a string
+import InvoiceContent from "../InvoiceContent";
 
 const InvoicePreview = ({ booking }) => {
   const [client, setClient] = useState(null);
@@ -25,68 +27,22 @@ const InvoicePreview = ({ booking }) => {
     }
 
     const printWindow = window.open("", "_blank");
-
-    const invoiceContent = `
-      <html>
-        <head>
-          <title>تذكرة الرحلة</title>
-          <style>
-            body { font-family: Arial, sans-serif; background-color: #f9f9f9; color: #333; }
-            .invoice-container { max-width: 600px; margin: auto; padding: 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); }
-            .invoice-header { text-align: center; margin-bottom: 20px; }
-            .invoice-header h2 { font-size: 24px; color: #2c3e50; margin: 0; }
-            .invoice-header p { font-size: 14px; color: #777; margin: 5px 0; }
-            .invoice-details { margin-top: 20px; }
-            .invoice-details p { margin: 8px 0; font-size: 16px; }
-            .invoice-footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; text-align: center; font-size: 14px; color: #777; }
-            @media print { body { background-color: #fff; } .invoice-container { box-shadow: none; border: none; } }
-          </style>
-        </head>
-        <body dir="rtl">
-          <div class="invoice-container">
-            <div class="invoice-header">
-              <h2>تذكرة الرحلة</h2>
-              <p>تاريخ الفاتورة: ${new Date().toLocaleDateString("ar-SA", {
-                weekday: "long",
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}</p>            
-            </div>
-            <div class="invoice-details">
-              <p><strong>رقم الرحلة:</strong> ${
-                client.tripNumber || "غير متوفر"
-              }</p>
-              <p><strong>التاريخ:</strong> ${
-                client.date
-                  ? new Date(client.date).toLocaleDateString()
-                  : "غير متوفر"
-              }</p>
-              <p><strong>شركة التأجير:</strong> ${
-                client.leasingCompany || "غير متوفر"
-              }</p>
-              <p><strong>تكلفة الرحلة:</strong> ${booking.totalAmount} ريال</p>
-              <p><strong>المبلغ المدفوع:</strong> ${booking.paidAmount} ريال</p>
-              <p><strong>الباقي:</strong> ${booking.remainingAmount} ريال</p>
-            </div>
-            <div class="invoice-footer">
-              <p><strong>صـدى الحكمة للعمـــــــــــــرة والزيــــــــــــارة </strong></p>
-              <p>هاتف: 0530368559 - 0507005838 - 0555435531</p>
-              <p>البريد الإلكتروني: info@company.com</p>
-            </div>
-          </div>
-          <script>
-            window.onload = function() {
-              window.print();
-              window.onafterprint = function() { window.close(); };
-            };
-          </script>
-        </body>
-      </html>
-    `;
-
-    printWindow.document.write(invoiceContent);
+    printWindow.document.write(
+      `<html><head><title>تذكرة الرحلة</title></head><body>`
+    );
+    printWindow.document.write(
+      `<div id="invoice-content"></div></body></html>`
+    );
     printWindow.document.close();
+
+    // Render the InvoiceContent component in the new window
+    printWindow.document.getElementById("invoice-content").innerHTML =
+      ReactDOMServer.renderToString(
+        <InvoiceContent client={client} booking={booking} />
+      );
+
+    // Trigger print
+    printWindow.print();
   };
 
   return (

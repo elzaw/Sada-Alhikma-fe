@@ -149,7 +149,7 @@ const TripPage = () => {
       }
     } catch (error) {
       console.error("Error adding client:", error);
-      toast.error(`فشل في إضافة العميل: ${error.message}`);
+      toast.error(`فشل في إضافة العميل: ${error.response.data.error}`);
     }
   };
 

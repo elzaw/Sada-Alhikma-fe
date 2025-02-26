@@ -177,6 +177,7 @@ const InvoiceForm = ({ onSubmit }) => {
             <span className="text-red-500 text-sm">{errors.trip.message}</span>
           )}
         </div>
+
         {/* قائمة العملاء */}
         <div>
           <label className="block mb-1">العميل</label>
@@ -201,6 +202,7 @@ const InvoiceForm = ({ onSubmit }) => {
             </span>
           )}
         </div>
+
         {/* عدد الأفراد */}
         <div>
           <label className="block mb-1">عدد الأفراد</label>
@@ -218,6 +220,7 @@ const InvoiceForm = ({ onSubmit }) => {
             </span>
           )}
         </div>
+
         {/* تكلفة الفرد */}
         <div>
           <label className="block mb-1">تكلفة الفرد</label>
@@ -235,6 +238,7 @@ const InvoiceForm = ({ onSubmit }) => {
             </span>
           )}
         </div>
+
         {/* التكلفة الإجمالية */}
         <div>
           <label className="block mb-1">التكلفة الإجمالية</label>
@@ -248,6 +252,7 @@ const InvoiceForm = ({ onSubmit }) => {
             readOnly
           />
         </div>
+
         {/* المدفوع */}
         <div>
           <label className="block mb-1">المدفوع</label>
@@ -262,6 +267,7 @@ const InvoiceForm = ({ onSubmit }) => {
             </span>
           )}
         </div>
+
         {/* التحويل البنكي */}
         <div>
           <label className="block mb-1">التحويل البنكي</label>
@@ -271,6 +277,7 @@ const InvoiceForm = ({ onSubmit }) => {
             className="p-2 border rounded-lg w-full"
           />
         </div>
+
         {/* المتبقي */}
         <div>
           <label className="block mb-1">المتبقي</label>
@@ -284,6 +291,24 @@ const InvoiceForm = ({ onSubmit }) => {
             readOnly
           />
         </div>
+
+        {/* طريقة الدفع */}
+        <div>
+          <label className="block mb-1">طريقة الدفع</label>
+          <select
+            {...register("paymentMethod", { required: "هذا الحقل مطلوب" })}
+            className="p-2 border rounded-lg w-full"
+          >
+            <option value="cash">نقدي</option>
+            <option value="bankTransfer">تحويل بنكي</option>
+          </select>
+          {errors.paymentMethod && (
+            <span className="text-red-500 text-sm">
+              {errors.paymentMethod.message}
+            </span>
+          )}
+        </div>
+
         {/* خيارات الرحلة */}
         <div>
           <label className="block mb-1">خيارات الرحلة</label>
@@ -304,6 +329,7 @@ const InvoiceForm = ({ onSubmit }) => {
             </span>
           )}
         </div>
+
         {/* إظهار حقول إضافية عند اختيار "مكة والمدينة" */}
         {tripOption === "makkahMadinah" && (
           <>
@@ -340,6 +366,7 @@ const InvoiceForm = ({ onSubmit }) => {
             </div>
           </>
         )}
+
         {/* مكان الركوب */}
         <div>
           <label className="block mb-1">مكان الركوب</label>
@@ -354,14 +381,16 @@ const InvoiceForm = ({ onSubmit }) => {
             </span>
           )}
         </div>
-        {/* أسماء أفراد أخرى
-        <div className="col-span-2">
+
+        {/* أسماء أفراد أخرى */}
+        {/* <div className="col-span-2">
           <label className="block mb-1">أسماء أفراد أخرى</label>
           <textarea
             {...register("otherMembers")}
             className="p-2 border rounded-lg w-full"
           />
         </div> */}
+
         {/* عدد الأيام */}
         <div>
           <label className="block mb-1">عدد الأيام</label>
@@ -379,8 +408,9 @@ const InvoiceForm = ({ onSubmit }) => {
             </span>
           )}
         </div>
-        {/* الجنسية لكل فرد
-        <div>
+
+        {/* الجنسية لكل فرد */}
+        {/* <div>
           <label className="block mb-1">الجنسية لكل فرد</label>
           <input
             type="text"
@@ -393,6 +423,7 @@ const InvoiceForm = ({ onSubmit }) => {
             </span>
           )}
         </div> */}
+
         {/* اسم مسجل الحجز */}
         <div>
           <label className="block mb-1">اسم مسجل الحجز</label>
@@ -407,6 +438,7 @@ const InvoiceForm = ({ onSubmit }) => {
             </span>
           )}
         </div>
+
         {/* ملاحظات */}
         <div className="col-span-2">
           <label className="block mb-1">ملاحظات</label>
