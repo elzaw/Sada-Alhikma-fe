@@ -19,12 +19,14 @@ const ClientsByReturnDate = () => {
     setClients([]);
 
     try {
+      // Ensure returnDate is in YYYY-MM-DD format
+      const formattedDate = new Date(returnDate).toISOString().split("T")[0];
+
       const response = await instance.get("trips/bydate", {
-        params: {
-          returnDate: new Date(returnDate).toISOString().split("T")[0],
-        },
+        params: { returnDate: formattedDate },
       });
-      console.log(returnDate);
+
+      console.log("Selected returnDate:", formattedDate);
 
       if (response.data && Array.isArray(response.data)) {
         const filteredClients = response.data
@@ -32,44 +34,49 @@ const ClientsByReturnDate = () => {
             destination ? trip.busDetails?.destination === destination : true
           )
           .flatMap((trip) =>
-            trip.clients.flatMap((client) => {
-              if (client.returnStatus !== "نعم") return [];
-
-              // صف العميل الأساسي
-              const clientRow = {
-                tripNumber: trip.tripNumber,
-                clientName: client.client?.name || "غير متوفر",
-                nationality: client.client?.nationality || "غير متوفر",
-                type: "client",
-                departureLocation:
-                  trip.busDetails?.departureLocation || "غير متوفر",
-                destination: trip.busDetails?.destination || "غير متوفر",
-                returnStatus: client.returnStatus,
-                returnDate: client.returnDate,
-                totalCost: client.totalCost,
-              };
-
-              // صفوف المرافقين
-              const accompanyingRows = client.accompanyingPersons.map(
-                (person) => ({
+            trip.clients
+              .filter((client) => client.returnStatus === "نعم") // Only clients with returnStatus "نعم"
+              .flatMap((client) => {
+                // Create the main client row
+                const clientRow = {
                   tripNumber: trip.tripNumber,
-                  clientName: person.name,
-                  nationality: person.nationality,
-                  type: "accompanying",
+                  clientName: client.client?.name || "غير متوفر",
+                  nationality: client.client?.nationality || "غير متوفر",
+                  type: "client",
                   departureLocation:
                     trip.busDetails?.departureLocation || "غير متوفر",
                   destination: trip.busDetails?.destination || "غير متوفر",
                   returnStatus: client.returnStatus,
                   returnDate: client.returnDate,
                   totalCost: client.totalCost,
-                })
-              );
+                };
 
-              return [clientRow, ...accompanyingRows];
-            })
+                // Create accompanying persons rows
+                const accompanyingRows = (client.accompanyingPersons || []).map(
+                  (person) => ({
+                    tripNumber: trip.tripNumber,
+                    clientName: person.name,
+                    nationality: person.nationality,
+                    type: "accompanying",
+                    departureLocation:
+                      trip.busDetails?.departureLocation || "غير متوفر",
+                    destination: trip.busDetails?.destination || "غير متوفر",
+                    returnStatus: client.returnStatus,
+                    returnDate: client.returnDate,
+                    totalCost: client.totalCost,
+                  })
+                );
+
+                return [clientRow, ...accompanyingRows];
+              })
           );
 
-        setClients(filteredClients);
+        if (filteredClients.length === 0) {
+          console.warn("لم يتم العثور على عملاء عائدين في هذا التاريخ.");
+          setClients([]);
+        } else {
+          setClients(filteredClients);
+        }
       } else {
         setClients([]);
         console.warn("لم يتم العثور على رحلات في هذا التاريخ.");
