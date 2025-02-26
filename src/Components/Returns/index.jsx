@@ -24,6 +24,7 @@ const ClientsByReturnDate = () => {
           returnDate: new Date(returnDate).toISOString().split("T")[0],
         },
       });
+      console.log(returnDate);
 
       if (response.data && Array.isArray(response.data)) {
         const filteredClients = response.data
