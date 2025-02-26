@@ -20,7 +20,9 @@ const ClientsByReturnDate = () => {
 
     try {
       const response = await instance.get("trips/bydate", {
-        params: { returnDate },
+        params: {
+          returnDate: new Date(returnDate).toISOString().split("T")[0],
+        },
       });
 
       if (response.data && Array.isArray(response.data)) {
