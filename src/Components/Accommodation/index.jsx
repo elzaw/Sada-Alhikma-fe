@@ -4,7 +4,7 @@ import Select from "react-select";
 import { v4 as uuidv4 } from "uuid";
 import instance from "../../API/instance";
 import toast from "react-hot-toast";
-// import instance from "../../../API/instance";
+import * as XLSX from "xlsx-js-style";
 
 const Accommodation = () => {
   // State management
@@ -16,7 +16,6 @@ const Accommodation = () => {
   const [supervisorName, setSupervisorName] = useState("");
   const [supervisorPhone, setSupervisorPhone] = useState("");
   const [loading, setLoading] = useState(false);
-  // إضافة الحالة لتتبع عدد الغرف
   const [roomCounts, setRoomCounts] = useState({
     total: 0,
     six: 0,
@@ -33,6 +32,7 @@ const Accommodation = () => {
       [key]: value,
     }));
   };
+
   // Fetch all trips on component mount
   useEffect(() => {
     const fetchTrips = async () => {
@@ -215,6 +215,222 @@ const Accommodation = () => {
     fetchAccommodation();
   }, [selectedTripId]);
 
+  const exportToExcel = () => {
+    const data = [];
+
+    // إضافة بيانات مسؤول الرحلة
+    data.push(["اسم المشرف:", supervisorName]);
+    data.push(["رقم جوال المشرف:", supervisorPhone]);
+    data.push([]); // سطر فارغ لفصل البيانات
+
+    // دالة لإضافة مجموعة إلى البيانات
+    const addGroupToData = (group, startCol) => {
+      // عنوان المجموعة
+      data[data.length - 1][startCol] = `المجموعة: ${group.name}`;
+
+      // بيانات العملاء في المجموعة
+      group.rooms.forEach((room, index) => {
+        if (!data[data.length + index]) data.push([]); // إضافة صف جديد إذا لزم الأمر
+        data[data.length - 1][startCol] = room.name;
+        data[data.length - 1][startCol + 1] = room.identity;
+      });
+
+      // إضافة سطر فارغ بعد كل مجموعة
+      data.push([]);
+    };
+
+    // تنظيم المجموعات في صفوف (3 مجموعات في كل صف)
+    for (let i = 0; i < groups.length; i += 3) {
+      data.push([]); // إضافة صف جديد لكل 3 مجموعات
+      addGroupToData(groups[i], 0); // المجموعة الأولى في العمود 0
+      if (groups[i + 1]) addGroupToData(groups[i + 1], 3); // المجموعة الثانية في العمود 3
+      if (groups[i + 2]) addGroupToData(groups[i + 2], 6); // المجموعة الثالثة في العمود 6
+    }
+
+    // إضافة مسافة كبيرة بين المجموعات والإحصائيات
+    for (let i = 0; i < 5; i++) {
+      data.push([]);
+    }
+
+    // إضافة بيانات الإحصائيات
+    data.push(["إحصائيات الغرف"]);
+    data.push([
+      "إجمالي عدد الغرف",
+      "الغرف السداسية",
+      "الخماسية",
+      "الرباعية",
+      "الثلاثية",
+      "الثنائية",
+    ]);
+    data.push([
+      roomCounts.total,
+      roomCounts.six,
+      roomCounts.five,
+      roomCounts.four,
+      roomCounts.three,
+      roomCounts.two,
+    ]);
+
+    // إنشاء ورقة عمل
+    const ws = XLSX.utils.aoa_to_sheet(data);
+
+    // إضافة تنسيقات RTL وتكبير الخط
+    const range = XLSX.utils.decode_range(ws["!ref"]);
+    for (let R = range.s.r; R <= range.e.r; ++R) {
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+        if (!ws[cellAddress]) ws[cellAddress] = { v: "" }; // تأكد من وجود الخلية
+        ws[cellAddress].s = {
+          alignment: {
+            horizontal: "right", // محاذاة النص لليمين
+            vertical: "center",
+          },
+          font: {
+            sz: 14, // تكبير حجم الخط
+            bold: true, // جعل الخط عريض
+          },
+          border: {
+            top: { style: "thin", color: { rgb: "000000" } },
+            bottom: { style: "thin", color: { rgb: "000000" } },
+            left: { style: "thin", color: { rgb: "000000" } },
+            right: { style: "thin", color: { rgb: "000000" } },
+          },
+        };
+      }
+    }
+
+    // إضافة حدود سميكة حول بيانات مسؤول الرحلة
+    for (let R = 0; R < 2; ++R) {
+      for (let C = 0; C < 2; ++C) {
+        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+        if (!ws[cellAddress]) ws[cellAddress] = { v: "" };
+        ws[cellAddress].s = {
+          ...ws[cellAddress].s,
+          border: {
+            top: {
+              style: R === 0 ? "thick" : "thin",
+              color: { rgb: "000000" },
+            },
+            bottom: {
+              style: R === 1 ? "thick" : "thin",
+              color: { rgb: "000000" },
+            },
+            left: {
+              style: C === 0 ? "thick" : "thin",
+              color: { rgb: "000000" },
+            },
+            right: {
+              style: C === 1 ? "thick" : "thin",
+              color: { rgb: "000000" },
+            },
+          },
+        };
+      }
+    }
+
+    // إضافة حدود سميكة حول كل مجموعة
+    let groupRowStart = 3; // بداية صفوف المجموعات
+    groups.forEach((group, groupIndex) => {
+      const groupRowEnd = groupRowStart + group.rooms.length;
+      for (let R = groupRowStart; R <= groupRowEnd; ++R) {
+        for (
+          let C = groupIndex % 3 === 0 ? 0 : groupIndex % 3 === 1 ? 3 : 6;
+          C < (groupIndex % 3 === 0 ? 2 : groupIndex % 3 === 1 ? 5 : 8);
+          ++C
+        ) {
+          const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+          if (!ws[cellAddress]) ws[cellAddress] = { v: "" };
+          ws[cellAddress].s = {
+            ...ws[cellAddress].s,
+            border: {
+              top: {
+                style: R === groupRowStart ? "thick" : "thin",
+                color: { rgb: "000000" },
+              },
+              bottom: {
+                style: R === groupRowEnd ? "thick" : "thin",
+                color: { rgb: "000000" },
+              },
+              left: {
+                style:
+                  C ===
+                  (groupIndex % 3 === 0 ? 0 : groupIndex % 3 === 1 ? 3 : 6)
+                    ? "thick"
+                    : "thin",
+                color: { rgb: "000000" },
+              },
+              right: {
+                style:
+                  C ===
+                  (groupIndex % 3 === 0 ? 1 : groupIndex % 3 === 1 ? 4 : 7)
+                    ? "thick"
+                    : "thin",
+                color: { rgb: "000000" },
+              },
+            },
+          };
+        }
+      }
+      groupRowStart = groupRowEnd + 2; // الانتقال إلى المجموعة التالية
+    });
+
+    // إضافة حدود سميكة حول الإحصائيات
+    const statsRowStart = data.length - 3; // بداية صفوف الإحصائيات
+    for (let R = statsRowStart; R <= statsRowStart + 2; ++R) {
+      for (let C = 0; C < 6; ++C) {
+        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+        if (!ws[cellAddress]) ws[cellAddress] = { v: "" };
+        ws[cellAddress].s = {
+          ...ws[cellAddress].s,
+          border: {
+            top: {
+              style: R === statsRowStart ? "thick" : "thin",
+              color: { rgb: "000000" },
+            },
+            bottom: {
+              style: R === statsRowStart + 2 ? "thick" : "thin",
+              color: { rgb: "000000" },
+            },
+            left: {
+              style: C === 0 ? "thick" : "thin",
+              color: { rgb: "000000" },
+            },
+            right: {
+              style: C === 5 ? "thick" : "thin",
+              color: { rgb: "000000" },
+            },
+          },
+        };
+      }
+    }
+
+    // تنسيق أعمدة الجدول
+    const wscols = [
+      { wch: 20 }, // عرض الأعمدة
+      { wch: 20 },
+      { wch: 5 }, // عمود فارغ بين المجموعات
+      { wch: 20 },
+      { wch: 20 },
+      { wch: 5 }, // عمود فارغ بين المجموعات
+      { wch: 20 },
+      { wch: 20 },
+    ];
+    ws["!cols"] = wscols;
+
+    // إنشاء مصنف وإضافة الورقة
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "تسكين الرحلات");
+
+    // اسم الملف: الرحلة - رقم الرحلة
+    const selectedTrip = trips.find((trip) => trip.value === selectedTripId);
+    const fileName = selectedTrip
+      ? `تسكين_الرحلة_${selectedTrip.label.replace(/ - /g, "_")}.xlsx`
+      : "تسكين_الرحلات.xlsx";
+
+    // تصدير الملف
+    XLSX.writeFile(wb, fileName);
+  };
+
   return (
     <div className="p-4">
       <h1 className="text-2xl font-bold mb-4">تسكين الرحلات</h1>
@@ -252,7 +468,7 @@ const Accommodation = () => {
       {/* Drag-and-Drop System */}
       {selectedTripId && (
         <DragDropContext onDragEnd={handleDragEnd}>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* Clients List */}
             <Droppable droppableId="clients">
               {(provided) => (
@@ -358,10 +574,15 @@ const Accommodation = () => {
         💾 حفظ التسكين
       </button>
 
+      <button
+        onClick={exportToExcel}
+        className="bg-purple-500 text-white px-4 py-2 rounded mt-4"
+      >
+        📊 تصدير إلى Excel
+      </button>
       {/* Room statistics */}
-      {/* // تعديل جدول الإحصائيات للتأكد من أنه يظهر عند اختيار رحلة */}
       {selectedTripId && (
-        <div className="mt-6">
+        <div className="mt-6 overflow-x-auto">
           <h2 className="text-xl font-bold mb-2">إحصائيات الغرف</h2>
           <table className="w-full border-collapse border">
             <thead>

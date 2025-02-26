@@ -3,6 +3,7 @@ import { useForm, Controller } from "react-hook-form";
 import Select from "react-select";
 import instance from "../../../API/instance";
 import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 
 const InvoiceForm = ({ onSubmit }) => {
   const {
@@ -24,6 +25,9 @@ const InvoiceForm = ({ onSubmit }) => {
   const paidAmount = watch("paidAmount");
   const bankTransfer = watch("bankTransfer");
   const tripOption = watch("tripOption");
+  const madinahDepartureDate = watch("madinahDepartureDate");
+  const madinahReturnDate = watch("madinahReturnDate");
+  const navigate = useNavigate();
 
   // مراقبة التغييرات في totalAmount و paidAmount و bankTransfer وحساب remainingAmount
   useEffect(() => {
@@ -146,12 +150,27 @@ const InvoiceForm = ({ onSubmit }) => {
       if (response.status === 201) {
         toast.success("تم إنشاء الفاتورة بنجاح!");
         onSubmit(formattedData);
+        navigate(`/client/${selectedClientId}`); // تحويل الى الصفحة الر��يسية للفواتير
       }
     } catch (error) {
       console.error("Error creating invoice:", error);
       toast.error("فشل في إنشاء الفاتورة.");
     }
   };
+
+  useEffect(() => {
+    if (
+      tripOption === "makkahMadinah" &&
+      madinahDepartureDate &&
+      madinahReturnDate
+    ) {
+      const startDate = new Date(madinahDepartureDate);
+      const endDate = new Date(madinahReturnDate);
+      const timeDiff = endDate - startDate;
+      const daysDiff = Math.ceil(timeDiff / (1000 * 60 * 60 * 24)) + 1; // حساب الفرق بالأيام
+      setValue("numberOfDays", daysDiff);
+    }
+  }, [tripOption, madinahDepartureDate, madinahReturnDate, setValue]);
 
   return (
     <form onSubmit={handleSubmit(submitHandler)} className="p-6">
@@ -316,12 +335,12 @@ const InvoiceForm = ({ onSubmit }) => {
             {...register("tripOption", { required: "هذا الحقل مطلوب" })}
             className="p-2 border rounded-lg w-full"
           >
-            <option value="oneWay">ذهاب فقط</option>
-            <option value="roundTrip">ذهاب وعودة</option>
-            <option value="makkah">مكة</option>
-            <option value="makkahMadinah">مكة والمدينة</option>
-            <option value="returnOnly">عودة فقط</option>
-            <option value="accommodationOnly">تسكين فقط</option>
+            <option value="ذهاب فقط">ذهاب فقط</option>
+            <option value="ذهاب وعودة">ذهاب وعودة</option>
+            <option value="مكة">مكة</option>
+            <option value="مكة والمدينة">مكة والمدينة</option>
+            <option value="عودة فقط">عودة فقط</option>
+            <option value="تسكين فقط">تسكين فقط</option>
           </select>
           {errors.tripOption && (
             <span className="text-red-500 text-sm">
@@ -401,6 +420,7 @@ const InvoiceForm = ({ onSubmit }) => {
               min: 1,
             })}
             className="p-2 border rounded-lg w-full"
+            readOnly={tripOption === "makkahMadinah"} // جعل الحقل للقراءة فقط في حالة "مكة والمدينة"
           />
           {errors.numberOfDays && (
             <span className="text-red-500 text-sm">

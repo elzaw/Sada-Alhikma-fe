@@ -14,6 +14,7 @@ import TripPage from "./Components/Trips/Trip";
 import InvoicePage from "./Components/Invoices";
 import ClientsByReturnDateAndLocation from "./Components/Returns";
 import Accommodation from "./Components/Accommodation";
+import MadinaTrips from "./Components/MadinaTrips";
 
 const routes = createBrowserRouter([
   {
@@ -29,6 +30,7 @@ const routes = createBrowserRouter([
       { path: "/invoice/", element: <InvoicePage /> },
       { path: "/returns/", element: <ClientsByReturnDateAndLocation /> },
       { path: "/accommodation/", element: <Accommodation /> },
+      { path: "/city-trips/", element: <MadinaTrips /> },
 
       { path: "/clients", element: <Clients /> },
       { path: "/client/:id", element: <Client /> },

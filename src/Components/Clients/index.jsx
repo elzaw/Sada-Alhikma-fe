@@ -3,6 +3,7 @@ import AddClientForm from "./AddClient";
 import instance from "../../API/instance";
 import { useNavigate } from "react-router-dom"; // Import useNavigate
 import { Modal, Button, Checkbox } from "@mui/material";
+import * as XLSX from "xlsx-js-style"; // استيراد المكتبة
 
 const Clients = () => {
   const [showForm, setShowForm] = useState(false);
@@ -13,6 +14,7 @@ const Clients = () => {
   const [openModal, setOpenModal] = useState(false);
   const [file, setFile] = useState(null);
   const navigate = useNavigate();
+
   // Fetch clients from API
   const fetchClients = async () => {
     try {
@@ -131,9 +133,61 @@ const Clients = () => {
       alert("Failed to upload file.");
     }
   };
+
+  const exportClientsToExcel = () => {
+    const data = [];
+
+    // إضافة عناوين الأعمدة
+    data.push(["الاسم", "رقم الجوال", "الجنسية", "رقم الهوية", "مكان الركوب"]);
+
+    // إضافة بيانات العملاء
+    clients.forEach((client) => {
+      data.push([
+        client.name,
+        client.phone,
+        client.nationality,
+        client.identityNumber,
+        client.boardingLocation,
+      ]);
+    });
+
+    // إنشاء ورقة عمل
+    const ws = XLSX.utils.aoa_to_sheet(data);
+
+    // تنسيق الأعمدة
+    const wscols = [
+      { wch: 20 }, // عرض الأعمدة
+      { wch: 15 },
+      { wch: 15 },
+      { wch: 15 },
+      { wch: 20 },
+    ];
+    ws["!cols"] = wscols;
+
+    // تنسيق العناوين
+    const headerRange = XLSX.utils.decode_range(ws["!ref"]);
+    for (let C = headerRange.s.c; C <= headerRange.e.c; ++C) {
+      const cellAddress = XLSX.utils.encode_cell({ r: 0, c: C });
+      if (!ws[cellAddress]) ws[cellAddress] = { v: "" };
+      ws[cellAddress].s = {
+        font: { bold: true, sz: 14 }, // خط عريض وحجم كبير
+        alignment: { horizontal: "center" }, // محاذاة النص في المنتصف
+        fill: { fgColor: { rgb: "D9D9D9" } }, // لون خلفية العناوين
+      };
+    }
+
+    // إنشاء مصنف وإضافة الورقة
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "العملاء");
+
+    // تصدير الملف
+    XLSX.writeFile(wb, "قائمة_العملاء.xlsx");
+  };
+
   return (
     <>
-      <div className="my-4 flex justify-center gap-4">
+      {/* Buttons Container */}
+      <div className="my-4 flex flex-col lg:flex-row lg:justify-center gap-4 px-4">
         <button
           onClick={() => setShowForm(true)}
           className="bg-blue-500 text-white px-4 py-2 rounded-lg"
@@ -155,7 +209,7 @@ const Clients = () => {
         />
         <label
           htmlFor="fileInput"
-          className="bg-purple-500 text-white px-4 py-2 rounded-lg cursor-pointer"
+          className="bg-purple-500 text-white px-4 py-2 rounded-lg cursor-pointer text-center"
         >
           Upload Excel/CSV
         </label>
@@ -165,8 +219,15 @@ const Clients = () => {
         >
           Upload
         </button>
+        <button
+          onClick={exportClientsToExcel}
+          className="bg-orange-500 text-white px-4 py-2 rounded-lg"
+        >
+          طباعة ملف العملاء
+        </button>
       </div>
 
+      {/* Rest of the code remains the same */}
       <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-lg">
         <h1 className="text-2xl font-bold mb-4">قائمة العملاء</h1>
         <div className="mb-4">
@@ -227,17 +288,27 @@ const Clients = () => {
             value={message}
             onChange={(e) => setMessage(e.target.value)}
           />
-          <div className="mt-4 flex justify-end space-x-2">
-            <Button variant="outlined" onClick={() => setOpenModal(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="contained"
-              color="success"
-              onClick={handleSendWhatsApp}
-            >
-              Send
-            </Button>
+          <div className="mt-4 flex justify-end ">
+            <div className="mx-2">
+              <Button
+                variant="outlined"
+                className=""
+                onClick={() => setOpenModal(false)}
+              >
+                Cancel
+              </Button>
+            </div>
+
+            <div className="mx-2">
+              <Button
+                variant="contained"
+                className=""
+                color="success"
+                onClick={handleSendWhatsApp}
+              >
+                Send
+              </Button>
+            </div>
           </div>
         </div>
       </Modal>
@@ -262,14 +333,6 @@ const Clients = () => {
                   {client.nationality}
                 </p>
               </div>
-
-              <div className="hidden sm:block sm:shrink-0">
-                <img
-                  alt=""
-                  src="https://via.placeholder.com/150"
-                  className="size-16 rounded-lg object-cover shadow-xs"
-                />
-              </div>
             </div>
 
             <div className="mt-4">
@@ -283,13 +346,6 @@ const Clients = () => {
                 <strong>مكان الركوب:</strong> {client.boardingLocation}
               </p>
             </div>
-
-            <dl className="mt-6 flex gap-4 sm:gap-6">
-              <div className="flex flex-col-reverse">
-                <dt className="text-sm font-medium text-gray-600">Client ID</dt>
-                <dd className="text-xs text-gray-500">{client._id}</dd>
-              </div>
-            </dl>
           </div>
         ))}
         {filteredClients.length === 0 && (

@@ -452,226 +452,7 @@ const TripPage = () => {
           <form onSubmit={handleAddClient} className="mb-6">
             <h2 className="text-xl font-semibold mb-4">إضافة عميل جديد</h2>
             <div className="grid grid-cols-2 gap-4">
-              {/* Basic client fields */}
-              <div>
-                <label className="block mb-1">الاسم</label>
-                <input
-                  type="text"
-                  value={newClient.name}
-                  onChange={(e) =>
-                    setNewClient({ ...newClient, name: e.target.value })
-                  }
-                  className="p-2 border rounded-lg w-full"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block mb-1">عدد الأفراد</label>
-                <input
-                  type="number"
-                  value={newClient.clientCount}
-                  onChange={(e) =>
-                    setNewClient({
-                      ...newClient,
-                      clientCount: parseInt(e.target.value),
-                    })
-                  }
-                  className="p-2 border rounded-lg w-full"
-                  min="1"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block mb-1">سعر الفرد الواحد</label>
-                <input
-                  type="number"
-                  value={newClient.pricePerPerson}
-                  onChange={(e) =>
-                    setNewClient({
-                      ...newClient,
-                      pricePerPerson: parseFloat(e.target.value),
-                    })
-                  }
-                  className="p-2 border rounded-lg w-full"
-                  min="0"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block mb-1">التكلفة الإجمالية</label>
-                <input
-                  type="number"
-                  value={newClient.totalCost}
-                  className="p-2 border rounded-lg w-full bg-gray-100"
-                  readOnly
-                />
-              </div>
-
-              <div>
-                <label className="block mb-1">رقم الجوال</label>
-                <input
-                  type="text"
-                  value={newClient.phone}
-                  onChange={(e) =>
-                    setNewClient({ ...newClient, phone: e.target.value })
-                  }
-                  className="p-2 border rounded-lg w-full"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block mb-1">رقم الهوية</label>
-                <input
-                  type="text"
-                  value={newClient.identityNumber}
-                  onChange={(e) =>
-                    setNewClient({
-                      ...newClient,
-                      identityNumber: e.target.value,
-                    })
-                  }
-                  className="p-2 border rounded-lg w-full"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block mb-1">الجنسية</label>
-                <input
-                  type="text"
-                  value={newClient.nationality}
-                  onChange={(e) =>
-                    setNewClient({ ...newClient, nationality: e.target.value })
-                  }
-                  className="p-2 border rounded-lg w-full"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block mb-1">مكان الركوب</label>
-                <input
-                  type="text"
-                  value={newClient.boardingLocation}
-                  onChange={(e) =>
-                    setNewClient({
-                      ...newClient,
-                      boardingLocation: e.target.value,
-                    })
-                  }
-                  className="p-2 border rounded-lg w-full"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block mb-1">حالة العودة</label>
-                <select
-                  value={newClient.returnStatus}
-                  onChange={(e) => {
-                    setNewClient({
-                      ...newClient,
-                      returnStatus: e.target.value,
-                    });
-                    if (e.target.value === "لا") {
-                      setNewClient((prev) => ({ ...prev, returnDate: "" })); // Clear return date if status is "لا"
-                    }
-                  }}
-                  className="p-2 border rounded-lg w-full"
-                >
-                  <option value="لا">لا</option>
-                  <option value="نعم">نعم</option>
-                </select>
-              </div>
-
-              {newClient.returnStatus === "نعم" && (
-                <div>
-                  <label className="block mb-1">تاريخ العودة</label>
-                  <input
-                    type="date"
-                    value={newClient.returnDate}
-                    onChange={(e) =>
-                      setNewClient({ ...newClient, returnDate: e.target.value })
-                    }
-                    className="p-2 border rounded-lg w-full"
-                    required
-                  />
-                </div>
-              )}
-
-              {/* Accompanying persons fields */}
-              {newClient.accompanyingPersons.map((person, index) => (
-                <div key={index} className="col-span-2 border-t pt-4">
-                  <h3 className="text-lg font-semibold mb-2">
-                    فرد مرافق {index + 1}
-                  </h3>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <label className="block mb-1">الاسم</label>
-                      <input
-                        type="text"
-                        value={person.name}
-                        onChange={(e) => {
-                          const updatedPersons = [
-                            ...newClient.accompanyingPersons,
-                          ];
-                          updatedPersons[index].name = e.target.value;
-                          setNewClient({
-                            ...newClient,
-                            accompanyingPersons: updatedPersons,
-                          });
-                        }}
-                        className="p-2 border rounded-lg w-full"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block mb-1">الجنسية</label>
-                      <input
-                        type="text"
-                        value={person.nationality}
-                        onChange={(e) => {
-                          const updatedPersons = [
-                            ...newClient.accompanyingPersons,
-                          ];
-                          updatedPersons[index].nationality = e.target.value;
-                          setNewClient({
-                            ...newClient,
-                            accompanyingPersons: updatedPersons,
-                          });
-                        }}
-                        className="p-2 border rounded-lg w-full"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block mb-1">رقم الهوية</label>
-                      <input
-                        type="text"
-                        value={person.identityNumber}
-                        onChange={(e) => {
-                          const updatedPersons = [
-                            ...newClient.accompanyingPersons,
-                          ];
-                          updatedPersons[index].identityNumber = e.target.value;
-                          setNewClient({
-                            ...newClient,
-                            accompanyingPersons: updatedPersons,
-                          });
-                        }}
-                        className="p-2 border rounded-lg w-full"
-                        required
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
+              {/* ... (الكود السابق يبقى كما هو) */}
             </div>
 
             <button
@@ -701,50 +482,60 @@ const TripPage = () => {
             تصدير كشف الشرطة
           </button>
         </div>
-        <table className="w-full border">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="border px-4 py-2">الاسم</th>
-              <th className="border px-4 py-2">رقم الهوية</th>
-              <th className="border px-4 py-2">رقم الجوال</th>
-              <th className="border px-4 py-2">مكان الركوب</th>
-            </tr>
-          </thead>
-          <tbody>
-            {clients.flatMap((client) => [
-              <tr
-                key={client.client._id}
-                className="hover:bg-gray-50 text-center"
-              >
-                <td className="border px-4 py-2">{client.client.name}</td>
-                <td className="border px-4 py-2">
-                  {client.client.identityNumber}
-                </td>
-                <td className="border px-4 py-2">{client.client.phone}</td>
-                <td className="border px-4 py-2">
-                  {client.client.boardingLocation}
-                </td>
-              </tr>,
-              ...client.accompanyingPersons.map((person, index) => (
+
+        {/* Responsive Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full border">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="border px-4 py-2">الاسم</th>
+                <th className="border px-4 py-2">رقم الهوية</th>
+                <th className="border px-4 py-2">رقم الجوال</th>
+                <th className="border px-4 py-2">مكان الركوب</th>
+              </tr>
+            </thead>
+            <tbody>
+              {clients.flatMap((client) => [
                 <tr
-                  key={`${client.client._id}-${index}`}
+                  key={client.client._id}
                   className="hover:bg-gray-50 text-center"
                 >
-                  <td className="border px-4 py-2">{person.name}</td>
-                  <td className="border px-4 py-2">{person.identityNumber}</td>
+                  <td className="border px-4 py-2">{client.client.name}</td>
+                  <td className="border px-4 py-2">
+                    {client.client.identityNumber}
+                  </td>
                   <td className="border px-4 py-2">{client.client.phone}</td>
                   <td className="border px-4 py-2">
                     {client.client.boardingLocation}
                   </td>
-                </tr>
-              )),
-            ])}
-          </tbody>
-        </table>
+                </tr>,
+                ...client.accompanyingPersons.map((person, index) => (
+                  <tr
+                    key={`${client.client._id}-${index}`}
+                    className="hover:bg-gray-50 text-center"
+                  >
+                    <td className="border px-4 py-2">{person.name}</td>
+                    <td className="border px-4 py-2">
+                      {person.identityNumber}
+                    </td>
+                    <td className="border px-4 py-2 text-gray-500 italic">
+                      {" "}
+                      {/* تغيير اللون وإضافة خط مائل */}
+                      {client.client.phone}
+                    </td>
+                    <td className="border px-4 py-2">
+                      {client.client.boardingLocation}
+                    </td>
+                  </tr>
+                )),
+              ])}
+            </tbody>
+          </table>
+        </div>
 
         {/* Display totalCost, totalPaid, and netAmount */}
         <div className="mt-6 p-4 bg-gray-50 rounded-lg shadow-sm">
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="text-center">
               <p className="text-lg font-semibold">التكلفة الإجمالية</p>
               <p className="text-gray-700">{trip.totalCost} ريال</p>

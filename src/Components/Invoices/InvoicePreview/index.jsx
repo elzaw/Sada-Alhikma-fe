@@ -5,6 +5,8 @@ import InvoiceContent from "../InvoiceContent";
 
 const InvoicePreview = ({ booking }) => {
   const [client, setClient] = useState(null);
+  const [clientData, setClientData] = useState(null);
+  console.log(booking);
 
   useEffect(() => {
     const fetchClient = async () => {

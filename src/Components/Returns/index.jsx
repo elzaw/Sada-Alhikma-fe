@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import instance from "../../API/instance";
+import * as XLSX from "xlsx-js-style"; // استيراد المكتبة
 
 const ClientsByReturnDate = () => {
   const [returnDate, setReturnDate] = useState("");
@@ -41,14 +42,13 @@ const ClientsByReturnDate = () => {
                 const clientRow = {
                   tripNumber: trip.tripNumber,
                   clientName: client.client?.name || "غير متوفر",
+                  phone: client.client?.phone || "غير متوفر", // رقم هاتف العميل الرئيسي
                   nationality: client.client?.nationality || "غير متوفر",
                   type: "client",
                   departureLocation:
                     trip.busDetails?.departureLocation || "غير متوفر",
                   destination: trip.busDetails?.destination || "غير متوفر",
-                  returnStatus: client.returnStatus,
                   returnDate: client.returnDate,
-                  totalCost: client.totalCost,
                 };
 
                 // Create accompanying persons rows
@@ -56,14 +56,13 @@ const ClientsByReturnDate = () => {
                   (person) => ({
                     tripNumber: trip.tripNumber,
                     clientName: person.name,
-                    nationality: person.nationality,
+                    phone: person.phone || client.client?.phone || "غير متوفر", // استخدام رقم هاتف العميل الرئيسي إذا لم يكن لدى المرافق رقم هاتف
+                    nationality: person.nationality || "غير متوفر",
                     type: "accompanying",
                     departureLocation:
                       trip.busDetails?.departureLocation || "غير متوفر",
                     destination: trip.busDetails?.destination || "غير متوفر",
-                    returnStatus: client.returnStatus,
                     returnDate: client.returnDate,
-                    totalCost: client.totalCost,
                   })
                 );
 
@@ -90,6 +89,73 @@ const ClientsByReturnDate = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // دالة لتصدير البيانات إلى Excel
+  const exportReturnsToExcel = () => {
+    const data = [];
+
+    // إضافة عنوان الملف
+    data.push(["عوادات - تاريخ العودة: " + returnDate]);
+    data.push([]); // سطر فارغ
+
+    // إضافة عناوين الأعمدة
+    data.push([
+      "رقم الرحلة",
+      "اسم العميل / المرافق",
+      "رقم الهاتف",
+      "الجنسية",
+      "مكان الانطلاق",
+      "الوجهة",
+      "تاريخ العودة",
+    ]);
+
+    // إضافة بيانات العملاء والمرافقين
+    clients.forEach((client) => {
+      data.push([
+        client.tripNumber,
+        client.clientName,
+        client.phone,
+        client.nationality,
+        client.departureLocation,
+        client.destination,
+        new Date(client.returnDate).toLocaleDateString(),
+      ]);
+    });
+
+    // إنشاء ورقة عمل
+    const ws = XLSX.utils.aoa_to_sheet(data);
+
+    // تنسيق الأعمدة
+    const wscols = [
+      { wch: 15 }, // عرض الأعمدة
+      { wch: 20 },
+      { wch: 15 },
+      { wch: 15 },
+      { wch: 15 },
+      { wch: 15 },
+      { wch: 15 },
+    ];
+    ws["!cols"] = wscols;
+
+    // تنسيق العناوين
+    const headerRange = XLSX.utils.decode_range(ws["!ref"]);
+    for (let C = headerRange.s.c; C <= headerRange.e.c; ++C) {
+      const cellAddress = XLSX.utils.encode_cell({ r: 1, c: C }); // العنوان في الصف الثاني
+      if (!ws[cellAddress]) ws[cellAddress] = { v: "" };
+      ws[cellAddress].s = {
+        font: { bold: true, sz: 14 }, // خط عريض وحجم كبير
+        alignment: { horizontal: "center" }, // محاذاة النص في المنتصف
+        fill: { fgColor: { rgb: "D9D9D9" } }, // لون خلفية العناوين
+      };
+    }
+
+    // إنشاء مصنف وإضافة الورقة
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "عوادات");
+
+    // تصدير الملف
+    XLSX.writeFile(wb, `عوادات_${returnDate}.xlsx`);
   };
 
   return (
@@ -120,7 +186,6 @@ const ClientsByReturnDate = () => {
           <option value="">كل الوجهات</option>
           <option value="المدينة">المدينة</option>
           <option value="مكة">مكة</option>
-          <option value="جدة">جدة</option>
         </select>
       </div>
 
@@ -133,24 +198,32 @@ const ClientsByReturnDate = () => {
         {loading ? "جاري البحث..." : "بحث"}
       </button>
 
+      {/* زر تصدير البيانات إلى Excel */}
+      <button
+        onClick={exportReturnsToExcel}
+        disabled={clients.length === 0}
+        className="bg-green-500 text-white px-4 py-2 rounded mx-3 "
+      >
+        طباعة كشف العوادات
+      </button>
+
       {/* عرض الأخطاء */}
       {error && <p className="text-red-500 mt-2">{error}</p>}
 
       {/* عرض النتائج */}
       {clients.length > 0 ? (
-        <div className="mt-4">
+        <div className="mt-4 overflow-x-auto">
           <h2 className="text-xl font-bold mb-2">النتائج</h2>
           <table className="w-full border-collapse border">
             <thead>
               <tr className="bg-gray-200">
                 <th className="border p-2">رقم الرحلة</th>
                 <th className="border p-2">اسم العميل / المرافق</th>
+                <th className="border p-2">رقم الهاتف</th>
                 <th className="border p-2">الجنسية</th>
                 <th className="border p-2">مكان الانطلاق</th>
                 <th className="border p-2">الوجهة</th>
-                <th className="border p-2">حالة العودة</th>
                 <th className="border p-2">تاريخ العودة</th>
-                <th className="border p-2">التكلفة الإجمالية</th>
               </tr>
             </thead>
             <tbody>
@@ -163,14 +236,19 @@ const ClientsByReturnDate = () => {
                 >
                   <td className="border p-2">{client.tripNumber}</td>
                   <td className="border p-2">{client.clientName}</td>
+                  <td
+                    className={`border p-2 ${
+                      client.type === "accompanying" ? "text-gray-500" : ""
+                    }`}
+                  >
+                    {client.phone}
+                  </td>
                   <td className="border p-2">{client.nationality}</td>
                   <td className="border p-2">{client.departureLocation}</td>
                   <td className="border p-2">{client.destination}</td>
-                  <td className="border p-2">{client.returnStatus}</td>
                   <td className="border p-2">
                     {new Date(client.returnDate).toLocaleDateString()}
                   </td>
-                  <td className="border p-2">{client.totalCost}</td>
                 </tr>
               ))}
             </tbody>

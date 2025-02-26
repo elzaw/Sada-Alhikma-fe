@@ -15,9 +15,8 @@ const AppLayout = () => {
     { id: 4, title: "داتا العملاء", path: "/clients" },
     { id: 5, title: "التسكين", path: "/accommodation" },
     { id: 6, title: "انشاء مستخدم", path: "/register" },
-    { id: 7, title: "كشف الشرطة", path: "/police-report" },
-    { id: 8, title: "رحلات المدينة", path: "/city-trips" },
-    { id: 9, title: "تسجيل خروج", path: "/logout" },
+    { id: 7, title: "رحلات المدينة", path: "/city-trips" },
+    { id: 8, title: "تسجيل خروج", path: "/logout" },
   ];
 
   return (
