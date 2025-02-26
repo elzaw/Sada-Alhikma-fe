@@ -22,12 +22,14 @@ const InvoiceForm = ({ onSubmit }) => {
   const selectedClientId = watch("client")?.value;
   const totalAmount = watch("totalAmount");
   const paidAmount = watch("paidAmount");
+  const bankTransfer = watch("bankTransfer");
+  const tripOption = watch("tripOption");
 
-  // مراقبة التغييرات في totalAmount و paidAmount وحساب remainingAmount
+  // مراقبة التغييرات في totalAmount و paidAmount و bankTransfer وحساب remainingAmount
   useEffect(() => {
-    const remaining = totalAmount - paidAmount;
+    const remaining = totalAmount - paidAmount - (bankTransfer || 0);
     setValue("remainingAmount", remaining >= 0 ? remaining : 0);
-  }, [totalAmount, paidAmount, setValue]);
+  }, [totalAmount, paidAmount, bankTransfer, setValue]);
 
   // جلب الرحلات عند تحميل المكون
   useEffect(() => {
@@ -80,12 +82,45 @@ const InvoiceForm = ({ onSubmit }) => {
     }
   }, [selectedTripId]);
 
+  useEffect(() => {
+    const fetchTrip = async () => {
+      if (selectedTripId && selectedClientId) {
+        try {
+          const response = await instance.get(
+            `trips/trip/${selectedTripId}/client/${selectedClientId}`
+          );
+          const client = response.data.clients[0]; // البيانات المرجعة هي مصفوفة، لذا نأخذ العنصر الأول
+
+          // حساب عدد الأفراد
+          const numberOfPeople =
+            client.clientCount + client.accompanyingPersons.length;
+
+          // حساب تكلفة الفرد
+          const costPerPerson = client.totalCost / numberOfPeople;
+
+          // تحديث الحقول في النموذج
+          setValue("numberOfPeople", numberOfPeople);
+          setValue("costPerPerson", costPerPerson);
+          setValue("totalAmount", client.totalCost);
+
+          // console.log(client); // يمكنك استخدام البيانات هنا
+        } catch (error) {
+          console.error("Error fetching trip details:", error);
+          toast.error("فشل في تحميل بيانات الرحلة والعميل.");
+        }
+      }
+    };
+
+    fetchTrip(); // استدعاء الدالة
+  }, [selectedTripId, selectedClientId, setValue]);
+
   // تحديث بيانات العميل عند اختياره
   useEffect(() => {
     if (selectedClientId) {
       const selectedClient = clients.find(
         (client) => client.value === selectedClientId
       );
+
       if (selectedClient) {
         setValue("numberOfPeople", selectedClient.clientCount);
         setValue(
@@ -231,6 +266,16 @@ const InvoiceForm = ({ onSubmit }) => {
           )}
         </div>
 
+        {/* التحويل البنكي */}
+        <div>
+          <label className="block mb-1">التحويل البنكي</label>
+          <input
+            type="number"
+            {...register("bankTransfer", { min: 0 })}
+            className="p-2 border rounded-lg w-full"
+          />
+        </div>
+
         {/* المتبقي */}
         <div>
           <label className="block mb-1">المتبقي</label>
@@ -245,19 +290,132 @@ const InvoiceForm = ({ onSubmit }) => {
           />
         </div>
 
-        {/* طريقة الدفع */}
+        {/* خيارات الرحلة */}
         <div>
-          <label className="block mb-1">طريقة الدفع</label>
+          <label className="block mb-1">خيارات الرحلة</label>
           <select
-            {...register("paymentMethod", { required: "هذا الحقل مطلوب" })}
+            {...register("tripOption", { required: "هذا الحقل مطلوب" })}
             className="p-2 border rounded-lg w-full"
           >
-            <option value="cash">نقدي</option>
-            <option value="bankTransfer">تحويل بنكي</option>
+            <option value="oneWay">ذهاب فقط</option>
+            <option value="roundTrip">ذهاب وعودة</option>
+            <option value="makkah">مكة</option>
+            <option value="makkahMadinah">مكة والمدينة</option>
+            <option value="returnOnly">عودة فقط</option>
+            <option value="accommodationOnly">تسكين فقط</option>
           </select>
-          {errors.paymentMethod && (
+          {errors.tripOption && (
             <span className="text-red-500 text-sm">
-              {errors.paymentMethod.message}
+              {errors.tripOption.message}
+            </span>
+          )}
+        </div>
+
+        {/* إظهار حقول إضافية عند اختيار "مكة والمدينة" */}
+        {tripOption === "makkahMadinah" && (
+          <>
+            <div>
+              <label className="block mb-1">تاريخ الذهاب إلى المدينة</label>
+              <input
+                type="date"
+                {...register("madinahDepartureDate", {
+                  required: "هذا الحقل مطلوب",
+                })}
+                className="p-2 border rounded-lg w-full"
+              />
+              {errors.madinahDepartureDate && (
+                <span className="text-red-500 text-sm">
+                  {errors.madinahDepartureDate.message}
+                </span>
+              )}
+            </div>
+
+            <div>
+              <label className="block mb-1">تاريخ العودة من المدينة</label>
+              <input
+                type="date"
+                {...register("madinahReturnDate", {
+                  required: "هذا الحقل مطلوب",
+                })}
+                className="p-2 border rounded-lg w-full"
+              />
+              {errors.madinahReturnDate && (
+                <span className="text-red-500 text-sm">
+                  {errors.madinahReturnDate.message}
+                </span>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* مكان الركوب */}
+        <div>
+          <label className="block mb-1">مكان الركوب</label>
+          <input
+            type="text"
+            {...register("pickupLocation", { required: "هذا الحقل مطلوب" })}
+            className="p-2 border rounded-lg w-full"
+          />
+          {errors.pickupLocation && (
+            <span className="text-red-500 text-sm">
+              {errors.pickupLocation.message}
+            </span>
+          )}
+        </div>
+
+        {/* أسماء أفراد أخرى
+        <div className="col-span-2">
+          <label className="block mb-1">أسماء أفراد أخرى</label>
+          <textarea
+            {...register("otherMembers")}
+            className="p-2 border rounded-lg w-full"
+          />
+        </div> */}
+
+        {/* عدد الأيام */}
+        <div>
+          <label className="block mb-1">عدد الأيام</label>
+          <input
+            type="number"
+            {...register("numberOfDays", {
+              required: "هذا الحقل مطلوب",
+              min: 1,
+            })}
+            className="p-2 border rounded-lg w-full"
+          />
+          {errors.numberOfDays && (
+            <span className="text-red-500 text-sm">
+              {errors.numberOfDays.message}
+            </span>
+          )}
+        </div>
+
+        {/* الجنسية لكل فرد */}
+        <div>
+          <label className="block mb-1">الجنسية لكل فرد</label>
+          <input
+            type="text"
+            {...register("nationality", { required: "هذا الحقل مطلوب" })}
+            className="p-2 border rounded-lg w-full"
+          />
+          {errors.nationality && (
+            <span className="text-red-500 text-sm">
+              {errors.nationality.message}
+            </span>
+          )}
+        </div>
+
+        {/* اسم مسجل الحجز */}
+        <div>
+          <label className="block mb-1">اسم مسجل الحجز</label>
+          <input
+            type="text"
+            {...register("reservationOfficer", { required: "هذا الحقل مطلوب" })}
+            className="p-2 border rounded-lg w-full"
+          />
+          {errors.reservationOfficer && (
+            <span className="text-red-500 text-sm">
+              {errors.reservationOfficer.message}
             </span>
           )}
         </div>
@@ -270,6 +428,14 @@ const InvoiceForm = ({ onSubmit }) => {
             className="p-2 border rounded-lg w-full"
           />
         </div>
+      </div>
+
+      {/* بيانات المؤسسة */}
+      <div className="mt-6">
+        <h3 className="text-lg font-semibold mb-2">بيانات المؤسسة</h3>
+        <p>اسم المؤسسة: مؤسسة الحج والعمرة</p>
+        <p>رقم الهاتف: 0123456789</p>
+        <p>العنوان: المدينة المنورة، المملكة العربية السعودية</p>
       </div>
 
       <button
