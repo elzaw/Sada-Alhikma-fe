@@ -47,7 +47,7 @@ const Trips = () => {
       <h1 className="text-2xl font-bold mb-4">إدارة الرحلات</h1>
 
       {/* Filters and Create Trip Button */}
-      <div className="mb-4 flex gap-4">
+      <div className="mb-4 flex flex-col lg:flex-row gap-4">
         <input
           type="date"
           value={filterDate}
