@@ -19,13 +19,29 @@ const Register = () => {
   const onSubmit = async (data) => {
     setLoading(true);
     setError(null);
+
+    // Retrieve the token from local storage
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      setError("يجب تسجيل الدخول أولاً");
+      setLoading(false);
+      return;
+    }
+
     try {
-      const response = await instance.post("/users", data);
+      const response = await instance.post("/users", data, {
+        headers: {
+          Authorization: `Bearer ${token}`, // Include the token in the headers
+        },
+      });
+
       toast.success("تم التسجيل بنجاح!");
       reset();
       navigate("/login");
     } catch (err) {
       setError(err.response?.data?.error || "حدث خطأ ما");
+      toast.error("عفوا لا يسمح بانشاء مستخدمين لغير المسؤوليين");
     } finally {
       setLoading(false);
     }

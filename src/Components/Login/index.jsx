@@ -3,16 +3,26 @@ import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom"; // For redirecting after login
 import instance from "../../API/instance";
 import toast from "react-hot-toast";
+import { useAuth } from "../../Contexts/AuthContext";
 
 const Login = () => {
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm();
+  } = useForm({
+    defaultValues: {
+      username: "",
+      password: "",
+    },
+    mode: "onChange", // التحقق من الصحة أثناء الكتابة
+  });
+
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const { login, isAuthenticated } = useAuth();
+
   const navigate = useNavigate(); // For redirecting after login
 
   const togglePasswordVisibility = () => {
@@ -29,6 +39,10 @@ const Login = () => {
       const { user, token } = response.data;
 
       // Store the token in localStorage or context
+      login(response.data); // Update the authenticated state in the context
+
+      // Store the token in localStorage or context
+
       localStorage.setItem("token", token);
       toast.success("تم تسجيل الدخول بنجاح!");
 
@@ -69,7 +83,13 @@ const Login = () => {
             <div className="relative">
               <input
                 type="text"
-                {...register("username", { required: "اسم المستخدم مطلوب" })}
+                {...register("username", {
+                  required: "اسم المستخدم مطلوب",
+                  minLength: {
+                    value: 3,
+                    message: "يجب أن يكون اسم المستخدم على الأقل 3 أحرف",
+                  },
+                })}
                 className="w-full rounded-lg border-gray-200 p-4 pe-12 text-sm shadow-xs"
                 placeholder="ادخل اسم المستخدم"
               />

@@ -1,10 +1,12 @@
 import React, { useState } from "react";
 import { FaTimes, FaBars } from "react-icons/fa";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useAuth } from "./Contexts/AuthContext";
 
 const AppLayout = () => {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
+  const { logout } = useAuth(); // Get the logout function from AuthContext
 
   const toggleSidebar = () => setIsOpen(!isOpen);
 
@@ -16,8 +18,20 @@ const AppLayout = () => {
     { id: 5, title: "التسكين", path: "/accommodation" },
     { id: 6, title: "انشاء مستخدم", path: "/register" },
     { id: 7, title: "رحلات المدينة", path: "/city-trips" },
-    { id: 8, title: "تسجيل خروج", path: "/logout" },
+    { id: 8, title: "تسجيل خروج", path: "" }, // Logout section
   ];
+
+  const handleSectionClick = (path) => {
+    if (path === "") {
+      // Handle logout
+      logout(); // Call the logout function
+      navigate("/login"); // Redirect to the login page
+    } else {
+      // Navigate to the selected path
+      navigate(path);
+      setIsOpen(false); // Close the sidebar on small screens
+    }
+  };
 
   return (
     <div className="flex min-h-screen h-auto lg:w-screen">
@@ -39,16 +53,14 @@ const AppLayout = () => {
             <li
               key={section.id}
               className="cursor-pointer hover:bg-indigo-800 p-2 rounded"
-              onClick={() => {
-                navigate(section.path);
-                setIsOpen(false);
-              }}
+              onClick={() => handleSectionClick(section.path)} // Use handleSectionClick
             >
               {section.title}
             </li>
           ))}
         </ul>
       </div>
+
       {/* Content Area */}
       <div className="flex-1 p-6 bg-gray-100 w-full">
         <div className="flex items-center justify-between lg:hidden">
@@ -60,14 +72,7 @@ const AppLayout = () => {
           </h1>
         </div>
 
-        <h1 className="hidden lg:block text-3xl font-bold text-indigo-600 mb-8">
-          الصفحة الرئيسية
-        </h1>
-
         <div className="mt-6">
-          <p className="text-lg text-gray-700">
-            اختر أحد الخيارات من القائمة الجانبية.
-          </p>
           <Outlet />
         </div>
       </div>

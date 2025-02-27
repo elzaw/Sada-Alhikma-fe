@@ -154,7 +154,7 @@ const InvoiceForm = ({ onSubmit }) => {
       }
     } catch (error) {
       console.error("Error creating invoice:", error);
-      toast.error("فشل في إنشاء الفاتورة.");
+      toast.error("فشل في إنشاء الفاتورة. " + error.response.data.error);
     }
   };
 
@@ -401,15 +401,6 @@ const InvoiceForm = ({ onSubmit }) => {
           )}
         </div>
 
-        {/* أسماء أفراد أخرى */}
-        {/* <div className="col-span-2">
-          <label className="block mb-1">أسماء أفراد أخرى</label>
-          <textarea
-            {...register("otherMembers")}
-            className="p-2 border rounded-lg w-full"
-          />
-        </div> */}
-
         {/* عدد الأيام */}
         <div>
           <label className="block mb-1">عدد الأيام</label>
@@ -428,21 +419,6 @@ const InvoiceForm = ({ onSubmit }) => {
             </span>
           )}
         </div>
-
-        {/* الجنسية لكل فرد */}
-        {/* <div>
-          <label className="block mb-1">الجنسية لكل فرد</label>
-          <input
-            type="text"
-            {...register("nationality", { required: "هذا الحقل مطلوب" })}
-            className="p-2 border rounded-lg w-full"
-          />
-          {errors.nationality && (
-            <span className="text-red-500 text-sm">
-              {errors.nationality.message}
-            </span>
-          )}
-        </div> */}
 
         {/* اسم مسجل الحجز */}
         <div>
@@ -472,9 +448,8 @@ const InvoiceForm = ({ onSubmit }) => {
       {/* بيانات المؤسسة */}
       <div className="mt-6">
         <h3 className="text-lg font-semibold mb-2">بيانات المؤسسة</h3>
-        <p>اسم المؤسسة: مؤسسة الحج والعمرة</p>
-        <p>رقم الهاتف: 0123456789</p>
-        <p>العنوان: المدينة المنورة، المملكة العربية السعودية</p>
+        <p>اسم المؤسسة: صدي الحكمة للعمرة والزيارة</p>
+        <p>رقم الهاتف: 0580603848 - 0508364666 - 0542721457</p>
       </div>
 
       <button

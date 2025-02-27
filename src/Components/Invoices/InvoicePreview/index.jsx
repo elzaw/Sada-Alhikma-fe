@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import instance from "../../../API/instance";
-import ReactDOMServer from "react-dom/server"; // For rendering the component to a string
+import { useNavigate } from "react-router-dom"; // لاستخدام navigate للانتقال إلى صفحة الطباعة
 import InvoiceContent from "../InvoiceContent";
 
 const InvoicePreview = ({ booking }) => {
   const [client, setClient] = useState(null);
   const [clientData, setClientData] = useState(null);
-  console.log(booking);
+  const navigate = useNavigate(); // استخدام useNavigate للانتقال إلى صفحة أخرى
 
   useEffect(() => {
     const fetchClient = async () => {
@@ -20,31 +20,25 @@ const InvoicePreview = ({ booking }) => {
       }
     };
     fetchClient();
-  }, [booking]); // Depend on booking to avoid unnecessary re-fetches
+  }, [booking]);
+
+  useEffect(() => {
+    const fetchClient = async () => {
+      try {
+        const response = await instance.get(`/clients/${booking.client}/`);
+        setClientData(response.data);
+      } catch (error) {
+        console.error("Error fetching client details:", error);
+      }
+    };
+    fetchClient();
+  }, [booking]);
 
   const handlePrint = () => {
-    if (!client) {
-      alert("لم يتم تحميل بيانات العميل بعد!"); // Alert if client data isn't available yet
-      return;
-    }
-
-    const printWindow = window.open("", "_blank");
-    printWindow.document.write(
-      `<html><head><title>تذكرة الرحلة</title></head><body>`
-    );
-    printWindow.document.write(
-      `<div id="invoice-content"></div></body></html>`
-    );
-    printWindow.document.close();
-
-    // Render the InvoiceContent component in the new window
-    printWindow.document.getElementById("invoice-content").innerHTML =
-      ReactDOMServer.renderToString(
-        <InvoiceContent client={client} booking={booking} />
-      );
-
-    // Trigger print
-    printWindow.print();
+    // إرسال البيانات إلى صفحة الطباعة
+    navigate("/trip-invoice", {
+      state: { clientData, client, booking }, // إرسال البيانات كـ state
+    });
   };
 
   return (
@@ -75,7 +69,6 @@ const InvoicePreview = ({ booking }) => {
               )}`
             : "جارِ التحميل..."}
         </p>
-
         <p>
           <strong>شركة التأجير:</strong>{" "}
           {client?.leasingCompany || "جارِ التحميل..."}
@@ -84,7 +77,10 @@ const InvoicePreview = ({ booking }) => {
           <strong>تكلفة الرحلة:</strong> {booking.totalAmount} ريال
         </p>
         <p>
-          <strong>المبلغ المدفوع:</strong> {booking.paidAmount} ريال
+          <strong> المبلغ المدفوع نقدا:</strong> {booking.paidAmount} ريال
+        </p>
+        <p>
+          <strong>التحويل البنكي:</strong> {booking.bankTransfer} ريال
         </p>
         <p>
           <strong>الباقي:</strong> {booking.remainingAmount} ريال
