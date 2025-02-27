@@ -35,6 +35,8 @@ const TripPage = () => {
     try {
       const response = await instance.get(`/trips/${tripId}`);
       setTrip(response.data);
+      console.log(response.data);
+
       setClients(response.data.clients || []);
     } catch (error) {
       console.error("Error fetching trip:", error);
@@ -746,15 +748,15 @@ const TripPage = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="text-center">
               <p className="text-lg font-semibold">التكلفة الإجمالية</p>
-              <p className="text-gray-700">{trip.totalCost} ريال</p>
+              <p className="text-gray-700">{trip.totalTripCost} ريال</p>
             </div>
             <div className="text-center">
               <p className="text-lg font-semibold">المبلغ المدفوع</p>
-              <p className="text-gray-700">{trip.totalPaid} ريال</p>
+              <p className="text-gray-700">{trip.totalTripPaid} ريال</p>
             </div>
             <div className="text-center">
               <p className="text-lg font-semibold">المبلغ المتبقي</p>
-              <p className="text-gray-700">{trip.netAmount} ريال</p>
+              <p className="text-gray-700">{trip.totalTripNetAmount} ريال</p>
             </div>
           </div>
         </div>
