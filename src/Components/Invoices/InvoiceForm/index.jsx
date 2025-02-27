@@ -181,21 +181,21 @@ const InvoiceForm = ({ onSubmit }) => {
     }
   }, [tripOption, madinahDepartureDate, madinahReturnDate, setValue]);
 
-  // Fetch user ID from backend
+  // Fetch user ID
   useEffect(() => {
     const fetchUserId = async () => {
       try {
         const token = localStorage.getItem("token");
         if (!token) throw new Error("No token found");
-        console.log(token);
 
-        const response = await instance.get("/users/verifyToken", {
-          headers: { Authorization: token },
-        });
+        // Decode the token to get the user ID
+        const decodedToken = jwtDecode(token);
+        const userId = decodedToken.id; // Assuming the user ID is stored in the token under the key 'userId'
 
-        console.log(response);
+        if (!userId) throw new Error("User ID not found in token");
 
-        setValue("reservationOfficer", response.data.userId);
+        // Set the user ID in the form
+        setValue("reservationOfficer", userId);
       } catch (error) {
         console.error("Error fetching user ID:", error);
         toast.error("Authentication failed. Please log in again.");
@@ -456,7 +456,7 @@ const InvoiceForm = ({ onSubmit }) => {
 
         {/* اسم مسجل الحجز */}
         <div>
-          <label className="block mb-1">اسم مسجل الحجز</label>
+          {/* <label className="block mb-1">اسم مسجل الحجز</label> */}
           <input type="hidden" {...register("reservationOfficer")} />
 
           {errors.reservationOfficer && (
