@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import instance from "../../../API/instance";
 import toast from "react-hot-toast";
 
@@ -12,29 +12,28 @@ function CreateTripForm({ setShowCreateForm, onTripCreated }) {
     rentingCompany: "",
     busNumber: "",
     licensePlate: "",
-    seatCount: 0, // New field
+    seatCount: 0,
     driver1: "",
-    driver1Id: "", // New field
+    driver1Id: "",
     driver1Phone: "",
     driver2: "",
-    driver2Id: "", // New field
+    driver2Id: "",
     driver2Phone: "",
-    totalCost: 0,
-    totalPaid: 0,
+    totalTripCost: 0,
+    totalTripPaid: 0,
   });
 
-  const [netAmount, setNetAmount] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  // Calculate net amount
-  useEffect(() => {
-    setNetAmount(formData.totalCost - formData.totalPaid);
-  }, [formData.totalCost, formData.totalPaid]);
+  // Calculate net amount using useMemo
+  const netAmount = useMemo(() => {
+    return formData.totalTripCost - formData.totalTripPaid;
+  }, [formData.totalTripPaid, formData.totalTripPaid]);
 
   // Fetch the last trip number for the selected date
   useEffect(() => {
     const fetchLastTripNumber = async () => {
-      if (!formData.date) return; // Skip if no date is selected
+      if (!formData.date) return;
 
       try {
         const response = await instance.get(
@@ -42,16 +41,14 @@ function CreateTripForm({ setShowCreateForm, onTripCreated }) {
         );
         const lastTripNumber = response.data.lastTripNumber;
 
-        // Extract the sequential number from the last trip number
         const lastSequentialNumber = lastTripNumber
           ? parseInt(lastTripNumber.slice(-2), 10)
           : 0;
 
-        // Generate the new trip number
         const date = new Date(formData.date);
-        const year = date.getFullYear().toString().slice(-2); // Last 2 digits of the year
-        const month = String(date.getMonth() + 1).padStart(2, "0"); // Month (01-12)
-        const day = String(date.getDate()).padStart(2, "0"); // Day (01-31)
+        const year = date.getFullYear().toString().slice(-2);
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
         const newSequentialNumber = String(lastSequentialNumber + 1).padStart(
           2,
           "0"
@@ -109,18 +106,18 @@ function CreateTripForm({ setShowCreateForm, onTripCreated }) {
             }
           : null,
       ].filter(Boolean),
-      totalCost: formData.totalCost,
-      totalPaid: formData.totalPaid,
-      netAmount,
+      totalTripCost: formData.totalTripCost,
+      totalTripPaid: formData.totalTripPaid,
+      totalTripNetAmount: netAmount,
     };
+
+    console.log(tripData);
 
     try {
       const res = await instance.post("/trips", tripData);
 
       if (res && res.status === 201) {
         toast.success("تم إنشاء الرحلة بنجاح!");
-
-        // ✅ Clear form reliably
         setFormData({
           tripNumber: "",
           date: "",
@@ -137,12 +134,10 @@ function CreateTripForm({ setShowCreateForm, onTripCreated }) {
           driver2: "",
           driver2Id: "",
           driver2Phone: "",
-          totalCost: 0,
-          totalPaid: 0,
+          totalTripCost: 0,
+          totalTripPaid: 0,
         });
-
-        // Refresh parent component
-        if (onTripCreated) onTripCreated(); // Call onTripCreated to refresh the trips list
+        if (onTripCreated) onTripCreated();
         setShowCreateForm(false);
       } else {
         toast.error(
@@ -168,13 +163,13 @@ function CreateTripForm({ setShowCreateForm, onTripCreated }) {
     { label: "الشركة المستأجرة", name: "rentingCompany", type: "text" },
     { label: "رقم الباص", name: "busNumber", type: "text" },
     { label: "لوحة الباص", name: "licensePlate", type: "text" },
-    { label: "عدد المقاعد", name: "seatCount", type: "number" }, // New field
+    { label: "عدد المقاعد", name: "seatCount", type: "number" },
   ];
 
   const driverFields = [
     [
       { label: "اسم السائق الأول", name: "driver1", type: "text" },
-      { label: "رقم هوية السائق الأول", name: "driver1Id", type: "text" }, // New field
+      { label: "رقم هوية السائق الأول", name: "driver1Id", type: "text" },
       { label: "رقم هاتف السائق الأول", name: "driver1Phone", type: "tel" },
     ],
     [
@@ -183,7 +178,7 @@ function CreateTripForm({ setShowCreateForm, onTripCreated }) {
         label: "رقم هوية السائق الثاني (اختياري)",
         name: "driver2Id",
         type: "text",
-      }, // New field
+      },
       {
         label: "رقم هاتف السائق الثاني (اختياري)",
         name: "driver2Phone",
@@ -258,8 +253,8 @@ function CreateTripForm({ setShowCreateForm, onTripCreated }) {
               <label className="text-sm font-medium mb-1">إجمالي التكلفة</label>
               <input
                 type="number"
-                name="totalCost"
-                value={formData.totalCost}
+                name="totalTripCost"
+                value={formData.totalTripCost}
                 onChange={handleChange}
                 required
                 className="w-full p-2 border rounded"
@@ -270,8 +265,8 @@ function CreateTripForm({ setShowCreateForm, onTripCreated }) {
               <label className="text-sm font-medium mb-1">إجمالي المدفوع</label>
               <input
                 type="number"
-                name="totalPaid"
-                value={formData.totalPaid}
+                name="totalTripPaid"
+                value={formData.totalTripPaid}
                 onChange={handleChange}
                 required
                 className="w-full p-2 border rounded"
@@ -280,7 +275,7 @@ function CreateTripForm({ setShowCreateForm, onTripCreated }) {
             </div>
           </div>
 
-          {/* Net Amount (Spanning Two Columns) */}
+          {/* Net Amount */}
           <div className="md:col-span-2">
             <label className="block text-sm font-medium">صافي المبلغ</label>
             <input
@@ -291,7 +286,7 @@ function CreateTripForm({ setShowCreateForm, onTripCreated }) {
             />
           </div>
 
-          {/* Action Buttons (Spanning Two Columns) */}
+          {/* Action Buttons */}
           <div className="md:col-span-2 flex justify-end gap-2 mt-4">
             <button
               type="button"
