@@ -350,7 +350,7 @@ const InvoiceForm = ({ onSubmit }) => {
         </div>
 
         {/* إظهار حقول إضافية عند اختيار "مكة والمدينة" */}
-        {tripOption === "makkahMadinah" && (
+        {tripOption === "مكة والمدينة" && (
           <>
             <div>
               <label className="block mb-1">تاريخ الذهاب إلى المدينة</label>
