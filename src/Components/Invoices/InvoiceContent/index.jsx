@@ -15,11 +15,14 @@ const InvoiceContent = ({ clientData, client, booking }) => {
         className="w-full max-w-3xl bg-white rounded-lg shadow-lg p-8"
       >
         {/* Header */}
-        <div className="flex justify-center mb-4">
-          <img src="/logo.png" alt="Logo" className="w-10 h-10 mx-auto" />
-        </div>
+
         <div className="text-center border-b pb-4 mb-2">
           {/* الشعار */}
+          <img
+            src={logo}
+            alt="Logo"
+            className="absolute top-4 right-150 w-24 h-24"
+          />
           <h2 className="text-2xl font-bold text-gray-800">تذكرة الرحلة</h2>
           <p className="text-sm text-gray-600 mt-2">
             تاريخ الفاتورة:{" "}

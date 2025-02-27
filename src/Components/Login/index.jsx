@@ -33,8 +33,6 @@ const Login = () => {
     setLoading(true);
     setError(null);
     try {
-      console.log(data);
-
       const response = await instance.post("/users/login", data);
       const { user, token } = response.data;
 

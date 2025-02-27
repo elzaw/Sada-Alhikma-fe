@@ -4,6 +4,7 @@ import Select from "react-select";
 import instance from "../../../API/instance";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
+import { jwtDecode } from "jwt-decode";
 
 const InvoiceForm = ({ onSubmit }) => {
   const {
@@ -29,6 +30,14 @@ const InvoiceForm = ({ onSubmit }) => {
   const madinahReturnDate = watch("madinahReturnDate");
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const token = localStorage.getItem("token"); // افترض أن التوكن مخزن في localStorage
+    if (token) {
+      const decodedToken = jwtDecode(token);
+      const userId = decodedToken.id; // افترض أن id المستخدم موجود في التوكن
+      setValue("reservationOfficer", userId); // تعيين id المستخدم في حقل مسجل الحجز
+    }
+  }, [setValue]);
   // مراقبة التغييرات في totalAmount و paidAmount و bankTransfer وحساب remainingAmount
   useEffect(() => {
     const remaining = totalAmount - paidAmount - (bankTransfer || 0);
@@ -171,6 +180,31 @@ const InvoiceForm = ({ onSubmit }) => {
       setValue("numberOfDays", daysDiff);
     }
   }, [tripOption, madinahDepartureDate, madinahReturnDate, setValue]);
+
+  // Fetch user ID from backend
+  useEffect(() => {
+    const fetchUserId = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) throw new Error("No token found");
+        console.log(token);
+
+        const response = await instance.get("/users/verifyToken", {
+          headers: { Authorization: token },
+        });
+
+        console.log(response);
+
+        setValue("reservationOfficer", response.data.userId);
+      } catch (error) {
+        console.error("Error fetching user ID:", error);
+        toast.error("Authentication failed. Please log in again.");
+        navigate("/login");
+      }
+    };
+
+    fetchUserId();
+  }, [setValue, navigate]);
 
   return (
     <form onSubmit={handleSubmit(submitHandler)} className="p-6">
@@ -423,11 +457,8 @@ const InvoiceForm = ({ onSubmit }) => {
         {/* اسم مسجل الحجز */}
         <div>
           <label className="block mb-1">اسم مسجل الحجز</label>
-          <input
-            type="text"
-            {...register("reservationOfficer", { required: "هذا الحقل مطلوب" })}
-            className="p-2 border rounded-lg w-full"
-          />
+          <input type="hidden" {...register("reservationOfficer")} />
+
           {errors.reservationOfficer && (
             <span className="text-red-500 text-sm">
               {errors.reservationOfficer.message}

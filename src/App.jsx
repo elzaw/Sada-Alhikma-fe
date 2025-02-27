@@ -43,6 +43,7 @@ const routes = createBrowserRouter([
     path: "/register",
     element: <Register />,
   },
+  { path: "/trip-invoice", element: <TripInvoicePage /> },
 
   { path: "/login", element: <Login /> },
   { path: "*", element: <h1>Page Not Found</h1> }, // 404 page
