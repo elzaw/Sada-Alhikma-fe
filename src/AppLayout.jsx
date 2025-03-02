@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { FaTimes, FaBars } from "react-icons/fa";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "./Contexts/AuthContext";
+import logo from "./assets/logo.png"; // Import the logo image
 
 const AppLayout = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -21,16 +22,9 @@ const AppLayout = () => {
     { id: 8, title: "تسجيل خروج", path: "" }, // Logout section
   ];
 
-  const handleSectionClick = (path) => {
-    if (path === "") {
-      // Handle logout
-      logout(); // Call the logout function
-      navigate("/login"); // Redirect to the login page
-    } else {
-      // Navigate to the selected path
-      navigate(path);
-      setIsOpen(false); // Close the sidebar on small screens
-    }
+  const handleLogout = () => {
+    logout(); // Call the logout function
+    navigate("/login"); // Redirect to the login page
   };
 
   return (
@@ -48,14 +42,39 @@ const AppLayout = () => {
           </button>
         </div>
 
+        {/* Logo with Link to Home */}
+        <div className="flex justify-center mt-4">
+          <Link to="/" onClick={toggleSidebar}>
+            <img src={logo} alt="Logo" className="w-24 h-24 cursor-pointer" />{" "}
+            {/* Make the logo clickable */}
+          </Link>
+        </div>
+
         <ul className="mt-10 space-y-4 p-4">
           {sections.map((section) => (
-            <li
-              key={section.id}
-              className="cursor-pointer hover:bg-indigo-800 p-2 rounded"
-              onClick={() => handleSectionClick(section.path)} // Use handleSectionClick
-            >
-              {section.title}
+            <li key={section.id}>
+              {section.path === "" ? (
+                // Logout section
+                <div
+                  className="cursor-pointer hover:bg-indigo-800 p-2 rounded"
+                  onClick={handleLogout}
+                >
+                  {section.title}
+                </div>
+              ) : (
+                // Navigation sections
+                <NavLink
+                  to={section.path}
+                  className={({ isActive }) =>
+                    `block p-2 rounded hover:bg-indigo-800 ${
+                      isActive ? "bg-indigo-900" : ""
+                    }`
+                  }
+                  onClick={() => setIsOpen(false)} // Close sidebar on small screens
+                >
+                  {section.title}
+                </NavLink>
+              )}
             </li>
           ))}
         </ul>
