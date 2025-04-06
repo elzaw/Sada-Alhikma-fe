@@ -209,13 +209,361 @@ const TripPage = () => {
     setIsEditFormVisible(true);
   };
 
-  // Export functions (keep the same as before)
+  // Export to Excel
+  // Export to Excel with formatting
+  // دالة تصدير كشف الشرطة
   const exportPoliceSheet = () => {
-    // ... (same as before)
-  };
+    // بيانات الرحلة
+    const tripDate = new Date(trip.date).toLocaleDateString(); // تاريخ الرحلة
+    const leasingCompany = trip.leasingCompany; // اسم الشركة المؤجرة
+    const rentingCompany = trip.rentingCompany; // اسم الشركة المستأجرة
 
+    // بيانات السائقين
+    const drivers = trip.drivers.map((driver) => ({
+      name: driver.driverName,
+      idNumber: driver.driverId,
+      phone: driver.driverPhone,
+    }));
+
+    // بيانات الباص
+    const busDetails = {
+      busNumber: trip.busDetails.busNumber,
+      plateNumber: trip.busDetails.licensePlate,
+      seatCount: trip.busDetails.seatCount,
+      departureLocation: trip.busDetails.departureLocation,
+      destinationLocation: trip.busDetails.destination,
+    };
+
+    // بيانات العملاء (يتم استخراجها من clients) مع إضافة مسلسل
+    let serialNumber = 1;
+    const clientsData = clients.flatMap((client) => {
+      const clientData = [
+        {
+          مسلسل: serialNumber++,
+          "اسم العميل": client.client.name,
+          "رقم الهوية/الإقامة": client.client.identityNumber,
+          الجنسية: client.client.nationality,
+          "مكان الركوب": client.client.boardingLocation,
+        },
+      ];
+
+      const accompanyingPersonsData = client.accompanyingPersons.map(
+        (person) => ({
+          مسلسل: serialNumber++,
+          "اسم العميل": person.name,
+          "رقم الهوية/الإقامة": person.identityNumber,
+          الجنسية: person.nationality,
+          "مكان الركوب": client.client.boardingLocation,
+        })
+      );
+
+      return [...clientData, ...accompanyingPersonsData];
+    });
+
+    // إنشاء مصفوفة بيانات كشف الشرطة
+    const policeSheetData = [
+      ["كشف الشرطة"], // العنوان الرئيسي
+      [], // سطر فارغ
+      ["الشركة المستأجرة"], // عنوان الشركة المستأجرة
+      ["مؤسسة صدي الحكمة للخدمات التسويقية"], // اسم الشركة
+      ["س.ت: 5855356045"], // السجل التجاري
+      [],
+      ["مكان الانطلاق", busDetails.departureLocation],
+      [],
+      ["الوجهة", busDetails.destinationLocation],
+      [],
+      [], // سطر فارغ
+      [" الشركة الناقلة /", leasingCompany],
+      ["رقم الباص", busDetails.busNumber, busDetails.plateNumber],
+
+      [
+        "اسم السائق الأول",
+        drivers[0]?.name || "غير متوفر",
+        "جوال السائق",
+        drivers[0]?.phone || "غير متوفر",
+      ],
+      ["رقم إقامة/حدود السائق الأول", drivers[0]?.idNumber || "غير متوفر"],
+      // ["رقم جوال السائق الأول", drivers[0]?.phone || "غير متوفر"],
+      [
+        "اسم السائق الثاني",
+        drivers[1]?.name || "غير متوفر",
+        "جوال السائق",
+        drivers[1]?.phone || "غير متوفر",
+      ],
+      ["رقم إقامة/حدود السائق الثاني", drivers[1]?.idNumber || "غير متوفر"],
+      // ["رقم جوال السائق الثاني", drivers[1]?.phone || "غير متوفر"],
+      [
+        "تاريخ الرحلة",
+        (() => {
+          const date = new Date(trip.date);
+          const options = {
+            day: "numeric",
+            month: "numeric",
+            year: "numeric",
+            calendar: "islamic",
+          };
+
+          const hijriDate = date
+            .toLocaleDateString("ar-SA", options)
+            .replace(/(\d+)\/(\d+)\/(\d+)/, "$1 / $2 / $3هـ");
+
+          const weekday = date.toLocaleDateString("ar-SA", { weekday: "long" });
+
+          return `${hijriDate}\t\t\t${weekday}`;
+        })(),
+      ],
+      ["عدد المقاعد", busDetails.seatCount],
+      [], // سطر فارغ
+      ["اسم الشركة المستأجرة", rentingCompany],
+      [], // سطر فارغ
+      ["كشف العملاء"],
+    ];
+    // إضافة رؤوس الأعمدة
+    if (clientsData.length <= 20) {
+      policeSheetData.push([
+        "مسلسل",
+        "اسم العميل",
+        "رقم الهوية/الإقامة",
+        "الجنسية",
+        "مكان الركوب",
+      ]);
+      policeSheetData.push(
+        ...clientsData.map((client) => [
+          client["مسلسل"],
+          client["اسم العميل"],
+          client["رقم الهوية/الإقامة"],
+          client["الجنسية"],
+          client["مكان الركوب"],
+        ])
+      );
+    } else {
+      // تقسيم العملاء إلى قسمين
+      const half = Math.ceil(clientsData.length / 2);
+      const firstHalf = clientsData.slice(0, half);
+      const secondHalf = clientsData.slice(half);
+
+      // إضافة رؤوس الأعمدة للقسمين
+      policeSheetData.push([
+        "مسلسل",
+        "اسم العميل",
+        "رقم الهوية/الإقامة",
+        "",
+        "مسلسل",
+        "اسم العميل",
+        "رقم الهوية/الإقامة",
+      ]);
+
+      // دمج القسمين في صفوف متوازية
+      const maxLength = Math.max(firstHalf.length, secondHalf.length);
+      for (let i = 0; i < maxLength; i++) {
+        const row = [];
+
+        // العمود الأول
+        if (i < firstHalf.length) {
+          const client = firstHalf[i];
+          row.push(
+            client["مسلسل"],
+            client["اسم العميل"],
+            client["رقم الهوية/الإقامة"],
+            "" // عمود فارغ فاصل
+          );
+        } else {
+          row.push("", "", "", "");
+        }
+
+        // العمود الثاني
+        if (i < secondHalf.length) {
+          const client = secondHalf[i];
+          row.push(
+            client["مسلسل"],
+            client["اسم العميل"],
+            client["رقم الهوية/الإقامة"]
+          );
+        }
+
+        policeSheetData.push(row);
+      }
+    }
+
+    // إضافة التوقيعات (تعديل عدد الأعمدة حسب الحالة)
+    const signatureColumns = clientsData.length <= 20 ? 5 : 7;
+    policeSheetData.push([], new Array(signatureColumns).fill(""));
+    policeSheetData.push([
+      "المدير العام",
+      ...new Array(signatureColumns - 2).fill(""),
+      "ختم المؤسسة",
+    ]);
+
+    // إنشاء مصنف Excel
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(policeSheetData);
+
+    // تعريف الأنماط
+    const titleStyle = {
+      font: { bold: true, size: 16, color: { rgb: "000000" } },
+      alignment: { horizontal: "center" },
+    };
+
+    const companyHeaderStyle = {
+      font: { bold: true, size: 14, color: { rgb: "000000" } },
+      alignment: { horizontal: "right" },
+    };
+
+    const headerStyle = {
+      font: { bold: true, color: { rgb: "FFFFFF" } },
+      fill: { fgColor: { rgb: "4F81BD" } },
+      alignment: { horizontal: "center" },
+      border: {
+        top: { style: "thin", color: { rgb: "000000" } },
+        bottom: { style: "thin", color: { rgb: "000000" } },
+        left: { style: "thin", color: { rgb: "000000" } },
+        right: { style: "thin", color: { rgb: "000000" } },
+      },
+    };
+
+    const cellStyle = {
+      alignment: { horizontal: "center" },
+      border: {
+        top: { style: "medium", color: { rgb: "000000" } },
+        bottom: { style: "medium", color: { rgb: "000000" } },
+        left: { style: "medium", color: { rgb: "000000" } },
+        right: { style: "medium", color: { rgb: "000000" } },
+      },
+    };
+
+    // تطبيق الأنماط
+    const range = XLSX.utils.decode_range(ws["!ref"]);
+
+    // تطبيق نمط العنوان الرئيسي
+    ws["A1"].s = titleStyle;
+    XLSX.utils.sheet_add_aoa(ws, [["كشف الشرطة"]], { origin: "A1" });
+
+    // تطبيق نمط عنوان الشركة المستأجرة
+    ws["A3"].s = companyHeaderStyle;
+    ws["A4"].s = companyHeaderStyle;
+    ws["A5"].s = companyHeaderStyle;
+
+    // تطبيق نمط العناوين
+    for (let C = range.s.c; C <= range.e.c; ++C) {
+      const cellAddress = XLSX.utils.encode_cell({ r: 10, c: C });
+      if (!ws[cellAddress]) ws[cellAddress] = {};
+      ws[cellAddress].s = headerStyle;
+    }
+
+    // تطبيق نمط الخلايا
+    for (let R = range.s.r; R <= range.e.r; ++R) {
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+        if (!ws[cellAddress]) ws[cellAddress] = {};
+        ws[cellAddress].s = cellStyle;
+      }
+    }
+
+    // إضافة الورقة إلى المصنف
+    XLSX.utils.book_append_sheet(wb, ws, "كشف الشرطة");
+
+    // حفظ الملف
+    XLSX.writeFile(wb, `كشف الشرطة - ${trip.tripNumber}.xlsx`);
+  };
+  // دالة تصدير كشف الرحلة
+  // دالة تصدير كشف الرحلة مع التنسيقات
   const exportTripSheet = () => {
-    // ... (same as before)
+    // بيانات العملاء (يتم استخراجها من clients)
+    const clientsData = clients.flatMap((client) => {
+      const clientData = [
+        {
+          "اسم العميل": client.client.name,
+          "رقم الهوية": client.client.identityNumber,
+          "رقم الجوال": client.client.phone,
+          "مكان الركوب": client.client.boardingLocation,
+        },
+      ];
+
+      const accompanyingPersonsData = client.accompanyingPersons.map(
+        (person) => ({
+          "اسم العميل": person.name,
+          "رقم الهوية": person.identityNumber,
+          "رقم الجوال": client.client.phone, // نفس رقم جوال العميل
+          "مكان الركوب": client.client.boardingLocation,
+        })
+      );
+
+      return [...clientData, ...accompanyingPersonsData];
+    });
+
+    // إنشاء مصفوفة بيانات كشف الرحلة
+    const tripSheetData = [
+      ["كشف الرحلة"], // العنوان الرئيسي
+      [], // سطر فارغ
+      ["اسم العميل", "رقم الهوية", "رقم الجوال", "مكان الركوب"], // العناوين
+      ...clientsData.map((client) => [
+        client["اسم العميل"],
+        client["رقم الهوية"],
+        client["رقم الجوال"],
+        client["مكان الركوب"],
+      ]),
+    ];
+
+    // إنشاء مصنف Excel
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(tripSheetData);
+
+    // تعريف الأنماط
+    const headerStyle = {
+      font: { bold: true, color: { rgb: "FFFFFF" } }, // خط عريض، لون أبيض
+      fill: { fgColor: { rgb: "4F81BD" } }, // خلفية زرقاء
+      alignment: { horizontal: "center" }, // توسيط النص
+      border: {
+        top: { style: "thin", color: { rgb: "000000" } },
+        bottom: { style: "thin", color: { rgb: "000000" } },
+        left: { style: "thin", color: { rgb: "000000" } },
+        right: { style: "thin", color: { rgb: "000000" } },
+      },
+    };
+
+    const titleStyle = {
+      font: { bold: true, size: 16, color: { rgb: "000000" } }, // خط عريض، حجم كبير
+      alignment: { horizontal: "center" }, // توسيط النص
+    };
+
+    const cellStyle = {
+      alignment: { horizontal: "center" }, // توسيط النص
+      border: {
+        top: { style: "thin", color: { rgb: "000000" } },
+        bottom: { style: "thin", color: { rgb: "000000" } },
+        left: { style: "thin", color: { rgb: "000000" } },
+        right: { style: "thin", color: { rgb: "000000" } },
+      },
+    };
+
+    // تطبيق الأنماط
+    const range = XLSX.utils.decode_range(ws["!ref"]); // الحصول على نطاق الورقة
+
+    // تطبيق نمط العنوان الرئيسي
+    ws["A1"].s = titleStyle;
+    XLSX.utils.sheet_add_aoa(ws, [["كشف الرحلة"]], { origin: "A1" });
+
+    // تطبيق نمط العناوين
+    for (let C = range.s.c; C <= range.e.c; ++C) {
+      const cellAddress = XLSX.utils.encode_cell({ r: 2, c: C }); // الصف الثالث (العناوين)
+      if (!ws[cellAddress]) ws[cellAddress] = {};
+      ws[cellAddress].s = headerStyle;
+    }
+
+    // تطبيق نمط الخلايا
+    for (let R = range.s.r; R <= range.e.r; ++R) {
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+        if (!ws[cellAddress]) ws[cellAddress] = {};
+        ws[cellAddress].s = cellStyle;
+      }
+    }
+
+    // إضافة الورقة إلى المصنف
+    XLSX.utils.book_append_sheet(wb, ws, "كشف الرحلة");
+
+    // حفظ الملف
+    XLSX.writeFile(wb, `كشف الرحلة - ${trip.tripNumber}.xlsx`);
   };
 
   if (!trip) {
