@@ -1,18 +1,25 @@
 import React, { useEffect, useState } from "react";
 import AddClientForm from "./AddClient";
+import EditClientForm from "./EditClient"; // We'll create this component
 import instance from "../../API/instance";
-import { useNavigate } from "react-router-dom"; // Import useNavigate
+import { useNavigate } from "react-router-dom";
 import { Modal, Button, Checkbox } from "@mui/material";
-import * as XLSX from "xlsx-js-style"; // استيراد المكتبة
+import * as XLSX from "xlsx-js-style";
+import { ConfirmDialog } from "../ConfirmDialog"; // For delete confirmation
+import toast from "react-hot-toast";
 
 const Clients = () => {
   const [showForm, setShowForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [currentClient, setCurrentClient] = useState(null);
   const [clients, setClients] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedClients, setSelectedClients] = useState([]);
   const [message, setMessage] = useState("");
   const [openModal, setOpenModal] = useState(false);
   const [file, setFile] = useState(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [clientToDelete, setClientToDelete] = useState(null);
   const navigate = useNavigate();
 
   // Fetch clients from API
@@ -22,10 +29,10 @@ const Clients = () => {
       setClients(response.data);
     } catch (error) {
       console.error("Error fetching clients:", error);
+      toast.error("Failed to fetch clients");
     }
   };
 
-  // Fetch clients on component mount
   useEffect(() => {
     fetchClients();
   }, []);
@@ -41,21 +48,53 @@ const Clients = () => {
     ].some((field) => field?.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  // Close the modal and refresh clients
   const closeModal = () => {
     setShowForm(false);
-    fetchClients(); // Refresh clients after closing the modal
+    fetchClients();
   };
 
-  // Handle card click to navigate to client page
+  const closeEditModal = () => {
+    setShowEditForm(false);
+    fetchClients();
+  };
+
   const handleCardClick = (clientId) => {
-    navigate(`/client/${clientId}`); // Navigate to the client page
+    navigate(`/client/${clientId}`);
   };
 
   const handleSelectClient = (phone) => {
     setSelectedClients((prev) =>
       prev.includes(phone) ? prev.filter((p) => p !== phone) : [...prev, phone]
     );
+  };
+
+  // Handle edit button click
+  const handleEditClick = (client, e) => {
+    e.stopPropagation();
+    setCurrentClient(client);
+    setShowEditForm(true);
+  };
+
+  // Handle delete button click
+  const handleDeleteClick = (clientId, e) => {
+    e.stopPropagation();
+    setClientToDelete(clientId);
+    setConfirmOpen(true);
+  };
+
+  // Confirm delete
+  const handleConfirmDelete = async () => {
+    try {
+      await instance.delete(`/clients/${clientToDelete}`);
+      toast.success("تم حذف العميل بنجاح");
+      fetchClients();
+    } catch (error) {
+      console.error("Error deleting client:", error);
+      toast.error("Failed to delete client");
+    } finally {
+      setConfirmOpen(false);
+      setClientToDelete(null);
+    }
   };
 
   const handleSendWhatsApp = async () => {
@@ -183,7 +222,6 @@ const Clients = () => {
     // تصدير الملف
     XLSX.writeFile(wb, "قائمة_العملاء.xlsx");
   };
-
   return (
     <>
       {/* Buttons Container */}
@@ -227,7 +265,6 @@ const Clients = () => {
         </button>
       </div>
 
-      {/* Rest of the code remains the same */}
       <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-lg">
         <h1 className="text-2xl font-bold mb-4">قائمة العملاء</h1>
         <div className="mb-4">
@@ -249,6 +286,7 @@ const Clients = () => {
                 <th className="border px-4 py-2">الجنسية</th>
                 <th className="border px-4 py-2">رقم الهوية</th>
                 <th className="border px-4 py-2">مكان الركوب</th>
+                <th className="border px-4 py-2">الإجراءات</th>
               </tr>
             </thead>
             <tbody>
@@ -266,11 +304,27 @@ const Clients = () => {
                   <td className="border px-4 py-2">
                     {client.boardingLocation}
                   </td>
+                  <td className="border px-4 py-2">
+                    <div className="flex justify-center gap-2">
+                      <button
+                        onClick={(e) => handleEditClick(client, e)}
+                        className="bg-yellow-500 text-white px-2 py-1 rounded text-sm"
+                      >
+                        تعديل
+                      </button>
+                      <button
+                        onClick={(e) => handleDeleteClick(client._id, e)}
+                        className="bg-red-500 text-white px-2 py-1 rounded text-sm"
+                      >
+                        حذف
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
               {filteredClients.length === 0 && (
                 <tr>
-                  <td colSpan="6" className="text-center py-4">
+                  <td colSpan="7" className="text-center py-4">
                     لا توجد بيانات مطابقة.
                   </td>
                 </tr>
@@ -279,6 +333,8 @@ const Clients = () => {
           </table>
         </div>
       </div>
+
+      {/* WhatsApp Modal */}
       <Modal open={openModal} onClose={() => setOpenModal(false)}>
         <div className="bg-white p-6 rounded-lg shadow-lg max-w-md mx-auto mt-20">
           <h2 className="text-xl font-bold mb-4">Send WhatsApp Message</h2>
@@ -298,7 +354,6 @@ const Clients = () => {
                 Cancel
               </Button>
             </div>
-
             <div className="mx-2">
               <Button
                 variant="contained"
@@ -313,12 +368,21 @@ const Clients = () => {
         </div>
       </Modal>
 
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="تأكيد الحذف"
+        message="هل أنت متأكد أنك تريد حذف هذا العميل؟"
+      />
+
       {/* Clients Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredClients.map((client) => (
           <div
             key={client._id}
-            onClick={() => handleCardClick(client._id)} // Navigate on click
+            onClick={() => handleCardClick(client._id)}
             className="relative block overflow-hidden rounded-lg border bg-white mt-6 border-gray-100 p-4 sm:p-6 lg:p-8 cursor-pointer hover:shadow-lg transition-shadow"
           >
             <span className="absolute inset-x-0 bottom-0 h-2 bg-gradient-to-r from-green-300 via-blue-500 to-purple-600"></span>
@@ -328,7 +392,6 @@ const Clients = () => {
                 <h3 className="text-lg font-bold text-gray-900 sm:text-xl">
                   {client.name}
                 </h3>
-
                 <p className="mt-1 text-xs font-medium text-gray-600">
                   {client.nationality}
                 </p>
@@ -346,6 +409,27 @@ const Clients = () => {
                 <strong>مكان الركوب:</strong> {client.boardingLocation}
               </p>
             </div>
+
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleEditClick(client, e);
+                }}
+                className="bg-yellow-500 text-white px-2 py-1 rounded text-sm"
+              >
+                تعديل
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteClick(client._id, e);
+                }}
+                className="bg-red-500 text-white px-2 py-1 rounded text-sm"
+              >
+                حذف
+              </button>
+            </div>
           </div>
         ))}
         {filteredClients.length === 0 && (
@@ -360,11 +444,26 @@ const Clients = () => {
         <div className="fixed top-1/2 left-1/2 z-50 transform lg:-translate-x-3/4 -translate-x-1/2 lg:w-1/4 w-1/2 -translate-y-1/2">
           <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
             <AddClientForm onSuccess={closeModal} />
-
-            {/* Centered buttons */}
             <div className="mt-4 flex justify-center gap-4">
               <button
                 onClick={closeModal}
+                className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-800"
+              >
+                إغلاق
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Client Modal */}
+      {showEditForm && currentClient && (
+        <div className="fixed top-1/2 left-1/2 z-50 transform lg:-translate-x-3/4 -translate-x-1/2 lg:w-1/4 w-1/2 -translate-y-1/2">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+            <EditClientForm client={currentClient} onSuccess={closeEditModal} />
+            <div className="mt-4 flex justify-center gap-4">
+              <button
+                onClick={closeEditModal}
                 className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-800"
               >
                 إغلاق
