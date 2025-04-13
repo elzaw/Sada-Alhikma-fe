@@ -76,10 +76,11 @@ const ClientFormModal = ({
       nationality: clientData.nationality,
       boardingLocation: clientData.boardingLocation,
       accompanyingPersons: clientData.accompanyingPersons,
-      returnStatus: clientData.returnStatus,
+      returnStatus: clientData.returnStatus || "لا",
       returnDate:
         clientData.returnStatus === "نعم" ? clientData.returnDate : undefined,
       totalCost: clientData.totalCost,
+      totalPaid: clientData.totalPaid || 0, // Default to 0 if not provided
       pricePerPerson: clientData.pricePerPerson,
     };
 
