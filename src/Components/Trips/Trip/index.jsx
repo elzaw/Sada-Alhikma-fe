@@ -215,108 +215,121 @@ const TripPage = () => {
 
     // Header - First Row (Company Names)
     data.push([
-      "الشركة المستأجرة:",
-      // trip.rentingCompany || "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
       "مؤسسة صدي الحكمه للخدمات التسويقية",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
+      "الشركة المستأجرة:",
     ]);
 
-    data.push(["س.ت:", "5855356045", "", "", "", "", "", "", "", ""]);
+    data.push(["", "", "", "", "", "", "", "", "", "5855356045", "س.ت:"]);
 
     // Second Row (Company Details)
     data.push([
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
       "الشركة الناقلة / شركة سابتكو",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
     ]);
 
     // Third Row (Bus Details)
     data.push([
-      "أ س ن",
-      trip.busDetails?.licensePlate || "",
       "",
       "",
       "",
-      "رقم الباص:",
+      "",
+      "",
+      "",
       trip.busDetails?.busNumber || "",
+      "رقم الباص:",
       "",
-      "",
-      "",
+      trip.busDetails?.licensePlate || "",
+      "أ س ن",
     ]);
 
     // Fourth Row (Driver 1 Details)
     data.push([
-      "اسم السائق:",
-      trip.drivers?.[0]?.driverName || "لا يوجد",
-      "جوال السائق:",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
       trip.drivers?.[0]?.driverPhone || "لا يوجد",
-      "",
-      "",
-      "",
-      "",
-      "",
+      "جوال السائق:",
+      trip.drivers?.[0]?.driverName || "لا يوجد",
+      "اسم السائق:",
       "",
     ]);
 
     // Fifth Row (Driver 1 ID)
     data.push([
-      "رقم الهوية:",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
       trip.drivers?.[0]?.driverId || "لا يوجد",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
+      "رقم الهوية:",
       "",
     ]);
 
     // Sixth Row (Driver 2 Details)
     data.push([
-      "اسم السائق:",
-      trip.drivers?.[1]?.driverName || "لا يوجد",
-      "جوال السائق:",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
       trip.drivers?.[1]?.driverPhone || "لا يوجد",
-      "",
-      "",
-      "",
-      "",
-      "",
+      "جوال السائق:",
+      trip.drivers?.[1]?.driverName || "لا يوجد",
+      "اسم السائق:",
       "",
     ]);
 
     // Seventh Row (Driver 2 ID)
     data.push([
-      "رقم الهوية:",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
       trip.drivers?.[1]?.driverId || "لا يوجد",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
+      "رقم الهوية:",
       "",
     ]);
 
     // Eighth Row (Trip Date)
     data.push([
-      "تاريخ الرحلة:",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
       new Date(trip.date).toLocaleDateString("ar-SA", {
         weekday: "long",
         year: "numeric",
@@ -324,57 +337,54 @@ const TripPage = () => {
         day: "numeric",
         calendar: "islamic",
       }),
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
+      "تاريخ الرحلة:",
       "",
     ]);
 
     // Location Information
     data.push([
-      "الانطلاق:",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
       trip.busDetails?.departureLocation || "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
+      "الانطلاق:",
       "",
     ]);
     data.push([
-      "الوجهة:",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
       trip.busDetails?.destination || "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
+      "الوجهة:",
       "",
     ]);
 
     // Add empty row before table
     data.push([]);
 
-    // Table Headers
+    // Table Headers (reversed order)
     data.push([
-      "م",
-      "الاسم",
-      "الهوية/الاقامة",
-      "المكان",
       "الجنسية",
-      "م",
-      "الاسم",
-      "الهوية/الاقامة",
       "المكان",
+      "الهوية/الاقامة",
+      "الاسم",
+      "م",
       "الجنسية",
+      "المكان",
+      "الهوية/الاقامة",
+      "الاسم",
+      "م",
+      "",
     ]);
 
     // Process clients in two columns
@@ -409,26 +419,30 @@ const TripPage = () => {
       const rightPerson = processedClients[i + halfLength];
 
       const row = [
-        i + 1, // Left column number (1,2,3,4,5...)
-        leftPerson?.name || "",
-        leftPerson?.identityNumber || "",
-        leftPerson?.boardingLocation || "",
-        leftPerson?.nationality || "",
-        rightPerson ? i + halfLength + 1 : "", // Right column number (6,7,8,9,10...)
-        rightPerson?.name || "",
-        rightPerson?.identityNumber || "",
-        rightPerson?.boardingLocation || "",
         rightPerson?.nationality || "",
+        rightPerson?.boardingLocation || "",
+        rightPerson?.identityNumber || "",
+        rightPerson?.name || "",
+        rightPerson ? i + halfLength + 1 : "", // Right column number
+        leftPerson?.nationality || "",
+        leftPerson?.boardingLocation || "",
+        leftPerson?.identityNumber || "",
+        leftPerson?.name || "",
+        i + 1, // Left column number
+        "",
       ];
       data.push(row);
     }
 
     // Add empty row and signature
     data.push([]);
-    data.push(["المدير العام", "", "", "", "", "", "", "", "", ""]);
+    data.push(["", "", "", "", "", "", "", "", "", "", "المدير العام"]);
 
     // Create worksheet
     const ws = XLSX.utils.aoa_to_sheet(data);
+
+    // Set RTL direction
+    ws["!rtl"] = true;
 
     // Styling
     const range = XLSX.utils.decode_range(ws["!ref"]);
@@ -472,8 +486,9 @@ const TripPage = () => {
         // Table header styling
         if (R === 12) {
           ws[cellAddress].s.font = { name: "Arial", sz: 10, bold: true };
-          ws[cellAddress].s.fill = { fgColor: { rgb: "EEEEEE" } };
+          ws[cellAddress].s.fill = { fgColor: { rgb: "2F75B5" } }; // Dark blue background
           ws[cellAddress].s.alignment.horizontal = "center";
+          ws[cellAddress].s.font.color = { rgb: "FFFFFF" }; // White text
         }
 
         // Header section styling
@@ -485,16 +500,17 @@ const TripPage = () => {
 
     // Set column widths
     ws["!cols"] = [
-      { wch: 4 }, // م
-      { wch: 25 }, // الاسم
-      { wch: 12 }, // الهوية/الاقامة
-      { wch: 8 }, // المكان
       { wch: 8 }, // الجنسية
-      { wch: 4 }, // م
-      { wch: 25 }, // الاسم
-      { wch: 12 }, // الهوية/الاقامة
       { wch: 8 }, // المكان
+      { wch: 12 }, // الهوية/الاقامة
+      { wch: 25 }, // الاسم
+      { wch: 4 }, // م
       { wch: 8 }, // الجنسية
+      { wch: 8 }, // المكان
+      { wch: 12 }, // الهوية/الاقامة
+      { wch: 25 }, // الاسم
+      { wch: 4 }, // م
+      { wch: 20 }, // Empty column
     ];
 
     // Set row heights
@@ -503,8 +519,9 @@ const TripPage = () => {
     // Merge cells for headers
     ws["!merges"] = [
       // Company names
-      { s: { r: 0, c: 1 }, e: { r: 0, c: 4 } },
-      { s: { r: 0, c: 6 }, e: { r: 0, c: 9 } },
+      { s: { r: 0, c: 9 }, e: { r: 0, c: 10 } },
+      { s: { r: 1, c: 9 }, e: { r: 1, c: 10 } },
+      { s: { r: 2, c: 9 }, e: { r: 2, c: 10 } },
       // Other header merges as needed
     ];
 
@@ -532,6 +549,10 @@ const TripPage = () => {
           "رقم الهوية": client.client.identityNumber,
           "رقم الجوال": client.client.phone,
           "مكان الركوب": client.client.boardingLocation,
+          "التكلفة الإجمالية": client.totalCost,
+          "المبلغ المدفوع": client.totalPaid,
+          "المبلغ المتبقي": client.remainingAmount,
+          ملاحظات: client.notes || "",
         },
       ];
 
@@ -541,6 +562,10 @@ const TripPage = () => {
           "رقم الهوية": person.identityNumber,
           "رقم الجوال": client.client.phone, // نفس رقم جوال العميل
           "مكان الركوب": client.client.boardingLocation,
+          "التكلفة الإجمالية": "",
+          "المبلغ المدفوع": "",
+          "المبلغ المتبقي": "",
+          ملاحظات: "",
         })
       );
 
@@ -551,12 +576,25 @@ const TripPage = () => {
     const tripSheetData = [
       ["كشف الرحلة"], // العنوان الرئيسي
       [], // سطر فارغ
-      ["اسم العميل", "رقم الهوية", "رقم الجوال", "مكان الركوب"], // العناوين
+      [
+        "ملاحظات",
+        "المبلغ المتبقي",
+        "المبلغ المدفوع",
+        "التكلفة الإجمالية",
+        "مكان الركوب",
+        "رقم الجوال",
+        "رقم الهوية",
+        "اسم العميل",
+      ], // العناوين (معكوسة)
       ...clientsData.map((client) => [
-        client["اسم العميل"],
-        client["رقم الهوية"],
-        client["رقم الجوال"],
+        client["ملاحظات"],
+        client["المبلغ المتبقي"],
+        client["المبلغ المدفوع"],
+        client["التكلفة الإجمالية"],
         client["مكان الركوب"],
+        client["رقم الجوال"],
+        client["رقم الهوية"],
+        client["اسم العميل"],
       ]),
     ];
 
@@ -564,32 +602,42 @@ const TripPage = () => {
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(tripSheetData);
 
+    // تعيين اتجاه الورقة من اليمين إلى اليسار
+    ws["!rtl"] = true;
+
     // تعريف الأنماط
     const headerStyle = {
       font: { bold: true, color: { rgb: "FFFFFF" } }, // خط عريض، لون أبيض
-      fill: { fgColor: { rgb: "4F81BD" } }, // خلفية زرقاء
-      alignment: { horizontal: "center" }, // توسيط النص
+      fill: { fgColor: { rgb: "2F75B5" } }, // خلفية زرقاء داكنة
+      alignment: { horizontal: "center", vertical: "center", wrapText: true }, // توسيط النص
       border: {
-        top: { style: "thin", color: { rgb: "000000" } },
-        bottom: { style: "thin", color: { rgb: "000000" } },
-        left: { style: "thin", color: { rgb: "000000" } },
-        right: { style: "thin", color: { rgb: "000000" } },
+        top: { style: "medium", color: { rgb: "000000" } },
+        bottom: { style: "medium", color: { rgb: "000000" } },
+        left: { style: "medium", color: { rgb: "000000" } },
+        right: { style: "medium", color: { rgb: "000000" } },
       },
     };
 
     const titleStyle = {
       font: { bold: true, size: 16, color: { rgb: "000000" } }, // خط عريض، حجم كبير
-      alignment: { horizontal: "center" }, // توسيط النص
+      alignment: { horizontal: "center", vertical: "center" }, // توسيط النص عمودي وأفقي
+      fill: { fgColor: { rgb: "D3D3D3" } }, // خلفية رمادية فاتحة
     };
 
     const cellStyle = {
-      alignment: { horizontal: "center" }, // توسيط النص
+      alignment: { horizontal: "right", vertical: "center", wrapText: true }, // توسيط النص
       border: {
         top: { style: "thin", color: { rgb: "000000" } },
         bottom: { style: "thin", color: { rgb: "000000" } },
         left: { style: "thin", color: { rgb: "000000" } },
         right: { style: "thin", color: { rgb: "000000" } },
       },
+    };
+
+    const numberCellStyle = {
+      ...cellStyle,
+      numFmt: "#,##0.00", // تنسيق الأرقام
+      alignment: { horizontal: "right", vertical: "center", wrapText: true }, // توسيط النص
     };
 
     // تطبيق الأنماط
@@ -611,9 +659,32 @@ const TripPage = () => {
       for (let C = range.s.c; C <= range.e.c; ++C) {
         const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
         if (!ws[cellAddress]) ws[cellAddress] = {};
-        ws[cellAddress].s = cellStyle;
+
+        // تطبيق نمط الأرقام على أعمدة التكلفة والمدفوع والمتبقي
+        if (C >= 4 && C <= 6 && R > 2) {
+          ws[cellAddress].s = numberCellStyle;
+        } else {
+          ws[cellAddress].s = cellStyle;
+        }
       }
     }
+
+    // تعيين عرض الأعمدة (معكوس)
+    ws["!cols"] = [
+      { wch: 30 }, // ملاحظات
+      { wch: 15 }, // المبلغ المتبقي
+      { wch: 15 }, // المبلغ المدفوع
+      { wch: 15 }, // التكلفة الإجمالية
+      { wch: 15 }, // مكان الركوب
+      { wch: 15 }, // رقم الجوال
+      { wch: 15 }, // رقم الهوية
+      { wch: 25 }, // اسم العميل
+    ];
+
+    // دمج خلايا العنوان الرئيسي
+    ws["!merges"] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 7 } }, // دمج خلايا العنوان الرئيسي
+    ];
 
     // إضافة الورقة إلى المصنف
     XLSX.utils.book_append_sheet(wb, ws, "كشف الرحلة");

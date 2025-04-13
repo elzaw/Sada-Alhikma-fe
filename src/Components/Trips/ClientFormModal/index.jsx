@@ -19,7 +19,9 @@ const ClientFormModal = ({
       const updatedClient = {
         ...prev,
         [name]:
-          name === "clientCount" || name === "pricePerPerson"
+          name === "clientCount" ||
+          name === "pricePerPerson" ||
+          name === "totalPaid"
             ? parseFloat(value) || 0
             : value,
       };
@@ -28,6 +30,8 @@ const ClientFormModal = ({
       if (name === "clientCount" || name === "pricePerPerson") {
         updatedClient.totalCost =
           updatedClient.clientCount * updatedClient.pricePerPerson;
+        updatedClient.netAmount =
+          updatedClient.totalCost - (updatedClient.totalPaid || 0);
 
         // Update accompanying persons array length
         if (name === "clientCount") {
@@ -50,6 +54,12 @@ const ClientFormModal = ({
               updatedClient.accompanyingPersons.slice(0, newLength);
           }
         }
+      }
+
+      // Recalculate net amount when totalPaid changes
+      if (name === "totalPaid") {
+        updatedClient.netAmount =
+          updatedClient.totalCost - (parseFloat(value) || 0);
       }
 
       return updatedClient;
@@ -80,8 +90,9 @@ const ClientFormModal = ({
       returnDate:
         clientData.returnStatus === "نعم" ? clientData.returnDate : undefined,
       totalCost: clientData.totalCost,
-      totalPaid: clientData.totalPaid || 0, // Default to 0 if not provided
-      pricePerPerson: clientData.pricePerPerson,
+      totalPaid: clientData.totalPaid || 0,
+      netAmount: clientData.netAmount || clientData.totalCost,
+      notes: clientData.notes || "",
     };
 
     onSubmit(submitData);
@@ -216,6 +227,37 @@ const ClientFormModal = ({
                 />
               </div>
             )}
+            <div>
+              <label className="block mb-1">المبلغ المدفوع</label>
+              <input
+                type="number"
+                name="totalPaid"
+                value={clientData.totalPaid || 0}
+                onChange={handleInputChange}
+                className="p-2 border rounded-lg w-full"
+                min="0"
+                required
+              />
+            </div>
+            <div>
+              <label className="block mb-1">المبلغ المتبقي</label>
+              <input
+                type="number"
+                value={clientData.netAmount || clientData.totalCost}
+                className="p-2 border rounded-lg w-full bg-gray-100"
+                readOnly
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block mb-1">ملاحظات</label>
+              <textarea
+                name="notes"
+                value={clientData.notes || ""}
+                onChange={handleInputChange}
+                className="p-2 border rounded-lg w-full"
+                rows="3"
+              />
+            </div>
           </div>
 
           {/* Accompanying persons fields */}
