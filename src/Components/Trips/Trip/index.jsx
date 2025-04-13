@@ -216,7 +216,8 @@ const TripPage = () => {
     // Header - First Row (Company Names)
     data.push([
       "الشركة المستأجرة:",
-      "مؤسسة صدى الحكمة للخدمات التسويقية",
+      // trip.rentingCompany || "",
+      "مؤسسة صدي الحكمه للخدمات التسويقية",
       "",
       "",
       "",
@@ -226,6 +227,8 @@ const TripPage = () => {
       "",
       "",
     ]);
+
+    data.push(["س.ت:", "5855356045", "", "", "", "", "", "", "", ""]);
 
     // Second Row (Company Details)
     data.push([
@@ -234,8 +237,8 @@ const TripPage = () => {
       "",
       "",
       "",
-      "س.ت:",
-      "5855356045",
+      "",
+      "",
       "",
       "",
       "",
@@ -244,12 +247,12 @@ const TripPage = () => {
     // Third Row (Bus Details)
     data.push([
       "أ س ن",
-      "7930",
+      trip.busDetails?.licensePlate || "",
       "",
       "",
       "",
       "رقم الباص:",
-      "c118862",
+      trip.busDetails?.busNumber || "",
       "",
       "",
       "",
@@ -258,9 +261,9 @@ const TripPage = () => {
     // Fourth Row (Driver 1 Details)
     data.push([
       "اسم السائق:",
-      trip.drivers?.[0]?.driverName || "غير متوفر",
+      trip.drivers?.[0]?.driverName || "لا يوجد",
       "جوال السائق:",
-      trip.drivers?.[0]?.driverPhone || "غير متوفر",
+      trip.drivers?.[0]?.driverPhone || "لا يوجد",
       "",
       "",
       "",
@@ -272,7 +275,7 @@ const TripPage = () => {
     // Fifth Row (Driver 1 ID)
     data.push([
       "رقم الهوية:",
-      trip.drivers?.[0]?.driverId || "غير متوفر",
+      trip.drivers?.[0]?.driverId || "لا يوجد",
       "",
       "",
       "",
@@ -286,9 +289,9 @@ const TripPage = () => {
     // Sixth Row (Driver 2 Details)
     data.push([
       "اسم السائق:",
-      trip.drivers?.[1]?.driverName || "غير متوفر",
+      trip.drivers?.[1]?.driverName || "لا يوجد",
       "جوال السائق:",
-      trip.drivers?.[1]?.driverPhone || "غير متوفر",
+      trip.drivers?.[1]?.driverPhone || "لا يوجد",
       "",
       "",
       "",
@@ -300,7 +303,7 @@ const TripPage = () => {
     // Seventh Row (Driver 2 ID)
     data.push([
       "رقم الهوية:",
-      trip.drivers?.[1]?.driverId || "غير متوفر",
+      trip.drivers?.[1]?.driverId || "لا يوجد",
       "",
       "",
       "",
@@ -332,10 +335,21 @@ const TripPage = () => {
     ]);
 
     // Location Information
-    data.push(["الانطلاق:", "خميس مشيط", "", "", "", "", "", "", "", ""]);
+    data.push([
+      "الانطلاق:",
+      trip.busDetails?.departureLocation || "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+    ]);
     data.push([
       "الوجهة:",
-      "مكة المكرمة والعودة",
+      trip.busDetails?.destination || "",
       "",
       "",
       "",
@@ -346,7 +360,7 @@ const TripPage = () => {
       "",
     ]);
 
-    // Empty row before table
+    // Add empty row before table
     data.push([]);
 
     // Table Headers
@@ -370,13 +384,19 @@ const TripPage = () => {
           name: clientObj.client.name,
           identityNumber: clientObj.client.identityNumber,
           nationality: clientObj.client.nationality,
-          boardingLocation: clientObj.client.boardingLocation || "خميس",
+          boardingLocation:
+            clientObj.client.boardingLocation ||
+            trip.busDetails?.departureLocation ||
+            "",
         },
         ...clientObj.accompanyingPersons.map((person) => ({
           name: person.name,
           identityNumber: person.identityNumber,
           nationality: person.nationality,
-          boardingLocation: clientObj.client.boardingLocation || "خميس",
+          boardingLocation:
+            clientObj.client.boardingLocation ||
+            trip.busDetails?.departureLocation ||
+            "",
         })),
       ];
       return allPersons;
@@ -433,15 +453,31 @@ const TripPage = () => {
           },
         };
 
-        // Table header styling
+        // Add thick border between header section and client table
+        if (R === 12) {
+          // Top border of the table headers
+          ws[cellAddress].s.border.top = {
+            style: "thick",
+            color: { rgb: "000000" },
+          };
+        }
         if (R === 11) {
+          // Bottom border of the header section
+          ws[cellAddress].s.border.bottom = {
+            style: "thick",
+            color: { rgb: "000000" },
+          };
+        }
+
+        // Table header styling
+        if (R === 12) {
           ws[cellAddress].s.font = { name: "Arial", sz: 10, bold: true };
           ws[cellAddress].s.fill = { fgColor: { rgb: "EEEEEE" } };
           ws[cellAddress].s.alignment.horizontal = "center";
         }
 
         // Header section styling
-        if (R < 11) {
+        if (R < 12) {
           ws[cellAddress].s.font = { name: "Arial", sz: 10, bold: true };
         }
       }
