@@ -633,7 +633,10 @@ const TripPage = () => {
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">
-        رحلة: {trip.tripNumber} - {new Date(trip.date).toLocaleDateString()}
+        رحلة: {trip.tripNumber} -{" "}
+        {new Date(trip.date).getDate().toString().padStart(2, "0")}/
+        {(new Date(trip.date).getMonth() + 1).toString().padStart(2, "0")}/
+        {new Date(trip.date).getFullYear()}
       </h1>
       <div className="mb-4">
         <p className="text-lg font-semibold">

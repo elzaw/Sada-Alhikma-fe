@@ -116,7 +116,11 @@ const Trips = () => {
               <div>
                 <h2 className="text-xl font-semibold">
                   الرحلة: {trip.tripNumber} -{" "}
-                  {new Date(trip.date).toLocaleDateString()} -{" "}
+                  {new Date(trip.date).getDate().toString().padStart(2, "0")}/
+                  {(new Date(trip.date).getMonth() + 1)
+                    .toString()
+                    .padStart(2, "0")}
+                  /{new Date(trip.date).getFullYear()} -{" "}
                   {new Date(trip.date).toLocaleDateString("ar-SA", {
                     weekday: "long",
                     year: "numeric",
