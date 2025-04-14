@@ -187,6 +187,7 @@ const TripPage = () => {
 
   // Prepare client data for editing
   const prepareEditClient = (client) => {
+    console.log("Client data for editing:", client);
     setCurrentClient({
       _id: client.client._id,
       name: client.client.name,
@@ -197,9 +198,13 @@ const TripPage = () => {
       phone: client.client.phone || "",
       identityNumber: client.client.identityNumber || "",
       nationality: client.client.nationality || "",
-      boardingLocation: client.client.boardingLocation || "",
+      boardingLocation:
+        client.boardingLocation || client.client.boardingLocation || "",
       returnStatus: client.returnStatus || "لا",
       returnDate: client.returnDate || "",
+      totalPaid: client.totalPaid || 0,
+      remainingAmount: client.remainingAmount || 0,
+      notes: client.notes || "",
       accompanyingPersons: client.accompanyingPersons.map((person) => ({
         name: person.name,
         nationality: person.nationality,
@@ -691,6 +696,45 @@ const TripPage = () => {
 
     // حفظ الملف
     XLSX.writeFile(wb, `كشف الرحلة - ${trip.tripNumber}.xlsx`);
+  };
+
+  const handleUpdateClient = async (clientId) => {
+    try {
+      const clientToUpdate = trip.clients.find(
+        (c) => c.client._id === clientId
+      );
+
+      if (!clientToUpdate) {
+        toast.error("لم يتم العثور على العميل");
+        return;
+      }
+
+      // Get the client data from the form
+      const clientData = {
+        accompanyingPersons: clientToUpdate.accompanyingPersons,
+        returnStatus: clientToUpdate.returnStatus,
+        returnDate: clientToUpdate.returnDate,
+        totalCost: clientToUpdate.totalCost,
+        totalPaid: clientToUpdate.totalPaid,
+        boardingLocation: clientToUpdate.boardingLocation,
+        notes: clientToUpdate.notes,
+      };
+
+      // Send the update request using PATCH
+      const response = await instance.patch(
+        `/trips/${trip._id}/clients/${clientId}`,
+        clientData
+      );
+
+      if (response.data) {
+        // Update the trip state with the new data
+        setTrip(response.data.updatedTrip);
+        toast.success("تم تحديث بيانات العميل بنجاح");
+      }
+    } catch (error) {
+      console.error("Error updating client:", error);
+      toast.error("حدث خطأ أثناء تحديث بيانات العميل");
+    }
   };
 
   if (!trip) {
