@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import instance from "../../API/instance";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 const Register = () => {
   const {
@@ -44,6 +45,42 @@ const Register = () => {
       toast.error("عفوا لا يسمح بانشاء مستخدمين لغير المسؤوليين");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await axios.post(
+        `${process.env.REACT_APP_API_URL}/auth/login`,
+        {
+          username,
+          password,
+        }
+      );
+
+      const { token, user } = response.data;
+
+      // Store both role and isAdmin flag
+      localStorage.setItem("token", token);
+      localStorage.setItem("username", user.username);
+      localStorage.setItem("role", user.role);
+      localStorage.setItem("isAdmin", user.role === "admin");
+
+      // Log the stored values for debugging
+      console.log("Login successful. Stored values:", {
+        username: user.username,
+        role: user.role,
+        isAdmin: user.role === "admin",
+      });
+
+      toast.success("تم تسجيل الدخول بنجاح");
+      navigate("/");
+    } catch (error) {
+      console.error("Login error:", error);
+      toast.error(
+        error.response?.data?.message || "حدث خطأ أثناء تسجيل الدخول"
+      );
     }
   };
 

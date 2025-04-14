@@ -218,82 +218,176 @@ const Accommodation = () => {
   const exportToExcel = () => {
     const data = [];
 
-    // إضافة بيانات مسؤول الرحلة في الأعلى
-    data.push(["اسم المشرف:", supervisorName]);
-    data.push(["رقم جوال المشرف:", supervisorPhone]);
+    // إضافة عنوان الملف
+    data.push(["تسكين العملاء"]);
+    data.push([]); // سطر فارغ
+
+    // إضافة بيانات مسؤول الرحلة في الأعلى (معكوسة للعربية)
+    data.push(["محمود", "اسم المشرف:"]);
+    data.push([supervisorPhone || "", "رقم جوال المشرف:"]);
     data.push([]); // سطر فارغ للفصل
 
-    // تنظيم المجموعات في صفوف
-    let currentRow = 3;
-    for (let i = 0; i < groups.length; i += 3) {
-      // إضافة عناوين المجموعات
-      const headerRow = [];
-      if (groups[i]) headerRow[0] = `المجموعة: ${groups[i].name}`;
-      if (groups[i + 1]) headerRow[3] = `المجموعة: ${groups[i + 1].name}`;
-      if (groups[i + 2]) headerRow[6] = `المجموعة: ${groups[i + 2].name}`;
-      data.push(headerRow);
+    // تنظيم المجموعات في صفوف (من اليمين لليسار)
+    let currentRow = 5;
 
-      // تحديد أقصى عدد من الغرف في المجموعات الثلاث الحالية
-      const maxRooms = Math.max(
+    // حساب عدد الصفوف لكل مجموعة من 3 مجموعات
+    const groupSets = [];
+    for (let i = 0; i < groups.length; i += 3) {
+      const maxRoomsInSet = Math.max(
         groups[i]?.rooms.length || 0,
         groups[i + 1]?.rooms.length || 0,
         groups[i + 2]?.rooms.length || 0
       );
+      groupSets.push({
+        startIndex: i,
+        maxRooms: maxRoomsInSet,
+      });
+    }
 
-      // إضافة بيانات الغرف
+    // إضافة البيانات لكل مجموعة من 3 مجموعات
+    groupSets.forEach(({ startIndex, maxRooms }, setIndex) => {
+      const i = startIndex;
+
+      // إضافة عناوين المجموعات (معكوسة للعربية)
+      const headerRow = Array(9).fill("");
+      if (groups[i + 2]) headerRow[0] = `المجموعة: ${groups[i + 2].name}`;
+      if (groups[i + 1]) headerRow[3] = `المجموعة: ${groups[i + 1].name}`;
+      if (groups[i]) headerRow[6] = `المجموعة: ${groups[i].name}`;
+      data.push(headerRow);
+
+      // إضافة عناوين الهوية والاسم (معكوسة)
+      const subHeaderRow = Array(9).fill("");
+      subHeaderRow[1] = "رقم الهوية";
+      subHeaderRow[0] = "الاسم";
+      subHeaderRow[4] = "رقم الهوية";
+      subHeaderRow[3] = "الاسم";
+      subHeaderRow[7] = "رقم الهوية";
+      subHeaderRow[6] = "الاسم";
+      data.push(subHeaderRow);
+
+      // إضافة بيانات الغرف (معكوسة للعربية)
       for (let j = 0; j < maxRooms; j++) {
-        const roomRow = [];
+        const roomRow = Array(9).fill("");
 
-        // المجموعة الأولى
-        if (groups[i] && groups[i].rooms[j]) {
-          roomRow[0] = groups[i].rooms[j].name;
-          roomRow[1] = groups[i].rooms[j].identity;
-        }
-
-        // المجموعة الثانية
-        if (groups[i + 1] && groups[i + 1].rooms[j]) {
-          roomRow[3] = groups[i + 1].rooms[j].name;
-          roomRow[4] = groups[i + 1].rooms[j].identity;
-        }
-
-        // المجموعة الثالثة
+        // المجموعة الثالثة (تصبح الأولى من اليمين)
         if (groups[i + 2] && groups[i + 2].rooms[j]) {
-          roomRow[6] = groups[i + 2].rooms[j].name;
-          roomRow[7] = groups[i + 2].rooms[j].identity;
+          roomRow[0] = groups[i + 2].rooms[j].name || "";
+          roomRow[1] = groups[i + 2].rooms[j].identity || "";
+        }
+
+        // المجموعة الثانية (تبقى في الوسط)
+        if (groups[i + 1] && groups[i + 1].rooms[j]) {
+          roomRow[3] = groups[i + 1].rooms[j].name || "";
+          roomRow[4] = groups[i + 1].rooms[j].identity || "";
+        }
+
+        // المجموعة الأولى (تصبح الأخيرة من اليسار)
+        if (groups[i] && groups[i].rooms[j]) {
+          roomRow[6] = groups[i].rooms[j].name || "";
+          roomRow[7] = groups[i].rooms[j].identity || "";
         }
 
         data.push(roomRow);
       }
 
       // إضافة سطر فارغ بين مجموعات الصفوف
-      data.push([]);
-    }
+      data.push(Array(9).fill(""));
+    });
 
     // إضافة مسافة قبل إحصائيات الغرف
     data.push([]);
     data.push([]);
 
-    // إضافة إحصائيات الغرف
+    // إضافة إحصائيات الغرف (معكوسة للعربية)
     data.push(["إحصائيات الغرف"]);
     data.push([
-      "إجمالي عدد الغرف",
-      "الغرف السداسية",
-      "الخماسية",
-      "الرباعية",
-      "الثلاثية",
       "الثنائية",
+      "الثلاثية",
+      "الرباعية",
+      "الخماسية",
+      "الغرف السداسية",
+      "إجمالي عدد الغرف",
     ]);
     data.push([
-      roomCounts.total,
-      roomCounts.six,
-      roomCounts.five,
-      roomCounts.four,
-      roomCounts.three,
-      roomCounts.two,
+      roomCounts.two || 0,
+      roomCounts.three || 0,
+      roomCounts.four || 0,
+      roomCounts.five || 0,
+      roomCounts.six || 0,
+      roomCounts.total || 0,
     ]);
 
     // إنشاء ورقة عمل
     const ws = XLSX.utils.aoa_to_sheet(data);
+
+    // تنسيق الأعمدة مع عرض مناسب
+    const wscols = [
+      { wch: 25 }, // المجموعة 1 - الاسم
+      { wch: 15 }, // المجموعة 1 - الهوية
+      { wch: 5 }, // فاصل
+      { wch: 25 }, // المجموعة 2 - الاسم
+      { wch: 15 }, // المجموعة 2 - الهوية
+      { wch: 5 }, // فاصل
+      { wch: 25 }, // المجموعة 3 - الاسم
+      { wch: 15 }, // المجموعة 3 - الهوية
+      { wch: 5 }, // فاصل
+    ];
+    ws["!cols"] = wscols;
+
+    // تنسيق ارتفاع الصفوف
+    const wsrows = [];
+    for (let i = 0; i < data.length; i++) {
+      // ارتفاع أقل للصفوف العادية
+      wsrows[i] = { hpt: 15 }; // حوالي 20 بكسل
+
+      // ارتفاع أكبر قليلاً للعناوين
+      if (
+        i === 0 || // عنوان الملف
+        i === 2 ||
+        i === 3 || // بيانات المشرف
+        data[i].some(
+          (cell) => typeof cell === "string" && cell.includes("المجموعة")
+        ) || // عناوين المجموعات
+        data[i].some(
+          (cell) => typeof cell === "string" && cell.includes("إحصائيات الغرف")
+        ) // عنوان الإحصائيات
+      ) {
+        wsrows[i] = { hpt: 25 }; // حوالي 33 بكسل
+      }
+    }
+    ws["!rows"] = wsrows;
+
+    // تنسيق عنوان الملف
+    const titleCell = XLSX.utils.encode_cell({ r: 0, c: 0 });
+    ws[titleCell].s = {
+      font: { bold: true, sz: 16, color: { rgb: "FFFFFF" } },
+      alignment: {
+        horizontal: "center",
+        vertical: "center",
+        readingOrder: 2,
+        rtl: true,
+        wrapText: true,
+      },
+      fill: { fgColor: { rgb: "4F81BD" } },
+    };
+
+    // دمج خلايا عناوين المجموعات
+    let merges = [];
+    let currentRowIndex = 5;
+
+    groupSets.forEach(({ maxRooms }, setIndex) => {
+      const rowIndex = currentRowIndex;
+      // المجموعة الثالثة (يمين)
+      merges.push({ s: { r: rowIndex, c: 0 }, e: { r: rowIndex, c: 1 } });
+      // المجموعة الثانية (وسط)
+      merges.push({ s: { r: rowIndex, c: 3 }, e: { r: rowIndex, c: 4 } });
+      // المجموعة الأولى (يسار)
+      merges.push({ s: { r: rowIndex, c: 6 }, e: { r: rowIndex, c: 7 } });
+
+      currentRowIndex += maxRooms + 3; // +3 for header, subheader, and empty row
+    });
+
+    ws["!merges"] = merges;
 
     // تنسيق الخلايا
     const range = XLSX.utils.decode_range(ws["!ref"]);
@@ -301,14 +395,19 @@ const Accommodation = () => {
       for (let C = range.s.c; C <= range.e.c; ++C) {
         const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
         if (!ws[cellAddress]) ws[cellAddress] = { v: "" };
+
+        // التنسيق الأساسي لجميع الخلايا
         ws[cellAddress].s = {
           alignment: {
             horizontal: "right",
             vertical: "center",
+            readingOrder: 2,
+            rtl: true,
+            wrapText: true,
           },
           font: {
             sz: 12,
-            bold: true,
+            name: "Arial",
           },
           border: {
             top: { style: "thin", color: { rgb: "000000" } },
@@ -317,130 +416,137 @@ const Accommodation = () => {
             right: { style: "thin", color: { rgb: "000000" } },
           },
         };
+
+        // تنسيق خاص لعناوين المجموعات
+        let isGroupHeader = false;
+        let isSubHeader = false;
+
+        // حساب موقع الصف في مجموعة معينة
+        let accumulatedRows = 5;
+        for (
+          let groupSetIndex = 0;
+          groupSetIndex < groupSets.length;
+          groupSetIndex++
+        ) {
+          const { maxRooms } = groupSets[groupSetIndex];
+
+          if (R === accumulatedRows) {
+            isGroupHeader = true;
+            break;
+          }
+
+          if (R === accumulatedRows + 1) {
+            isSubHeader = true;
+            break;
+          }
+
+          accumulatedRows += maxRooms + 3;
+        }
+
+        // تطبيق التنسيق المناسب
+        if (isGroupHeader) {
+          ws[cellAddress].s = {
+            ...ws[cellAddress].s,
+            font: {
+              sz: 14,
+              bold: true,
+              color: { rgb: "FFFFFF" },
+            },
+            fill: { fgColor: { rgb: "4F81BD" } },
+            alignment: {
+              horizontal: "center",
+              vertical: "center",
+              readingOrder: 2,
+              rtl: true,
+              wrapText: true,
+            },
+          };
+        } else if (isSubHeader) {
+          ws[cellAddress].s = {
+            ...ws[cellAddress].s,
+            font: { sz: 12, bold: true },
+            fill: { fgColor: { rgb: "E6E6E6" } },
+            alignment: {
+              horizontal: "center",
+              vertical: "center",
+              readingOrder: 2,
+              rtl: true,
+              wrapText: true,
+            },
+          };
+        }
       }
     }
 
-    // تنسيق عناوين المجموعات
-    groups.forEach((_, index) => {
-      const row =
-        Math.floor(index / 3) *
-          (Math.max(
-            ...groups
-              .slice(index - (index % 3), index - (index % 3) + 3)
-              .map((g) => g.rooms.length)
-          ) +
-            2) +
-        3;
-      const col = (index % 3) * 3;
-      const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
-      if (ws[cellAddress]) {
-        ws[cellAddress].s = {
-          ...ws[cellAddress].s,
-          font: {
-            sz: 14,
-            bold: true,
-            color: { rgb: "0000FF" },
-          },
-          fill: {
-            fgColor: { rgb: "EEEEEE" },
-          },
-        };
-      }
-    });
-
     // تنسيق بيانات المشرف
-    for (let R = 0; R < 2; ++R) {
+    for (let R = 2; R < 4; ++R) {
       for (let C = 0; C < 2; ++C) {
         const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-        ws[cellAddress].s = {
-          ...ws[cellAddress].s,
-          font: {
-            sz: 14,
-            bold: true,
-          },
-          border: {
-            top: {
-              style: R === 0 ? "thick" : "thin",
-              color: { rgb: "000000" },
+        if (ws[cellAddress]) {
+          ws[cellAddress].s = {
+            alignment: {
+              horizontal: C === 1 ? "left" : "right", // عنوان يسار، قيمة يمين
+              vertical: "center",
+              readingOrder: 2,
+              rtl: true,
+              wrapText: true,
             },
-            bottom: {
-              style: R === 1 ? "thick" : "thin",
-              color: { rgb: "000000" },
+            font: {
+              sz: 14,
+              bold: C === 1, // العنوان عريض
+              color: { rgb: C === 1 ? "000000" : "000000" },
             },
-            left: {
-              style: C === 0 ? "thick" : "thin",
-              color: { rgb: "000000" },
+            fill: { fgColor: { rgb: "E6E6E6" } },
+            border: {
+              top: { style: "thin" },
+              bottom: { style: "thin" },
+              left: { style: "thin" },
+              right: { style: "thin" },
             },
-            right: {
-              style: C === 1 ? "thick" : "thin",
-              color: { rgb: "000000" },
-            },
-          },
-        };
+          };
+        }
       }
     }
 
     // تنسيق إحصائيات الغرف
-    const statsStart = data.length - 3;
-    for (let R = statsStart; R < data.length; ++R) {
+    const statsStartRow = data.length - 3;
+    for (let R = statsStartRow; R < data.length; ++R) {
       for (let C = 0; C < 6; ++C) {
         const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-        ws[cellAddress].s = {
-          ...ws[cellAddress].s,
-          font: {
-            sz: 12,
-            bold: true,
-          },
-          border: {
-            top: {
-              style: R === statsStart ? "thick" : "thin",
-              color: { rgb: "000000" },
+        if (ws[cellAddress]) {
+          ws[cellAddress].s = {
+            alignment: {
+              horizontal: "center",
+              vertical: "center",
+              readingOrder: 2,
+              rtl: true,
+              wrapText: true,
             },
-            bottom: {
-              style: R === data.length - 1 ? "thick" : "thin",
-              color: { rgb: "000000" },
+            font: {
+              sz: 12,
+              bold: true,
+              color: { rgb: R === statsStartRow ? "FFFFFF" : "000000" },
             },
-            left: {
-              style: C === 0 ? "thick" : "thin",
-              color: { rgb: "000000" },
+            fill: {
+              fgColor: { rgb: R === statsStartRow ? "4F81BD" : "E6E6E6" },
             },
-            right: {
-              style: C === 5 ? "thick" : "thin",
-              color: { rgb: "000000" },
+            border: {
+              top: { style: "thin" },
+              bottom: { style: "thin" },
+              left: { style: "thin" },
+              right: { style: "thin" },
             },
-          },
-          fill: {
-            fgColor: { rgb: R === statsStart ? "DDDDDD" : "FFFFFF" },
-          },
-        };
+          };
+        }
       }
     }
 
-    // تنسيق عرض الأعمدة
-    const wscols = [
-      { wch: 20 }, // الاسم
-      { wch: 15 }, // رقم الهوية
-      { wch: 5 }, // فاصل
-      { wch: 20 }, // الاسم
-      { wch: 15 }, // رقم الهوية
-      { wch: 5 }, // فاصل
-      { wch: 20 }, // الاسم
-      { wch: 15 }, // رقم الهوية
-    ];
-    ws["!cols"] = wscols;
-
-    // إنشاء المصنف وإضافة الورقة
+    // إنشاء مصنف وإضافة الورقة
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "تسكين الرحلات");
-
-    // تحديد اسم الملف
-    const selectedTrip = trips.find((trip) => trip.value === selectedTripId);
-    const fileName = selectedTrip
-      ? `تسكين_الرحلة_${selectedTrip.label.replace(/ - /g, "_")}.xlsx`
-      : "تسكين_الرحلات.xlsx";
+    XLSX.utils.book_append_sheet(wb, ws, "التسكين");
 
     // تصدير الملف
-    XLSX.writeFile(wb, fileName);
+    XLSX.writeFile(wb, `تسكين_العملاء.xlsx`);
   };
 
   return (

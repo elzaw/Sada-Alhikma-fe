@@ -52,18 +52,73 @@ const Trips = () => {
   };
 
   // Confirm delete action
-  const handleConfirmDelete = async () => {
+  const handleConfirmDelete = async (tripId) => {
     try {
-      await instance.delete(`/trips/${tripToDelete}`);
-      toast.success("تم حذف الرحلة بنجاح");
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error("يجب تسجيل الدخول أولاً");
+        return;
+      }
+
+      const response = await instance.delete(`/trips/${tripId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      toast.success(response.data.message || "تم حذف الرحلة بنجاح");
       fetchTrips(); // Refresh the list
+      setConfirmOpen(false); // Close the confirmation dialog
+      setTripToDelete(null); // Reset the trip to delete
     } catch (error) {
-      console.error("Error deleting trip:", error);
-      toast.error("فشل في حذف الرحلة");
-    } finally {
+      if (error.response?.status === 403) {
+        toast.error(
+          error.response.data.error ||
+            "غير مصرح لك بحذف الرحلات. يجب أن تكون مسؤولاً للقيام بهذه العملية."
+        );
+      } else if (error.response?.status === 401) {
+        toast.error("انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى.");
+        navigate("/login");
+      } else if (error.response?.status === 404) {
+        toast.error(error.response.data.error || "الرحلة غير موجودة");
+      } else {
+        toast.error(error.response?.data?.error || "حدث خطأ أثناء حذف الرحلة");
+        console.error("Error deleting trip:", error);
+      }
       setConfirmOpen(false);
       setTripToDelete(null);
     }
+  };
+
+  // Update the delete button to show only for admins
+  const renderDeleteButton = (tripId) => {
+    // Check both isAdmin and role to ensure compatibility
+    const isAdmin =
+      localStorage.getItem("isAdmin") === "true" ||
+      localStorage.getItem("role") === "admin";
+
+    if (!isAdmin) {
+      console.log("User is not admin. Admin status:", {
+        isAdmin: localStorage.getItem("isAdmin"),
+        role: localStorage.getItem("role"),
+        username: localStorage.getItem("username"),
+      });
+      return null; // Don't render the button for non-admins
+    }
+
+    return (
+      <button
+        onClick={(e) => {
+          e.stopPropagation(); // Prevent trip click event
+          handleDeleteClick(tripId, e);
+        }}
+        className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md text-sm transition-colors duration-200"
+        title="حذف الرحلة"
+      >
+        <span className="hidden sm:inline">حذف</span>
+        <span className="sm:hidden">🗑️</span>
+      </button>
+    );
   };
 
   // Filter trips based on date and trip number
@@ -136,12 +191,7 @@ const Trips = () => {
                 >
                   تعديل
                 </button>
-                <button
-                  onClick={(e) => handleDeleteClick(trip._id, e)}
-                  className="bg-red-500 text-white px-3 py-1 rounded-md text-sm hover:bg-red-600"
-                >
-                  حذف
-                </button>
+                {renderDeleteButton(trip._id)}
               </div>
             </div>
           </div>
@@ -184,10 +234,17 @@ const Trips = () => {
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         open={confirmOpen}
-        onClose={() => setConfirmOpen(false)}
-        onConfirm={handleConfirmDelete}
+        onClose={() => {
+          setConfirmOpen(false);
+          setTripToDelete(null);
+        }}
+        onConfirm={() => {
+          if (tripToDelete) {
+            handleConfirmDelete(tripToDelete);
+          }
+        }}
         title="تأكيد الحذف"
-        message="هل أنت متأكد أنك تريد حذف هذه الرحلة؟"
+        message="هل أنت متأكد أنك تريد حذف هذه الرحلة؟ لا يمكن التراجع عن هذا الإجراء."
       />
     </div>
   );

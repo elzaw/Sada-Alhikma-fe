@@ -99,55 +99,85 @@ const ClientsByReturnDate = () => {
     data.push(["عوادات - تاريخ العودة: " + returnDate]);
     data.push([]); // سطر فارغ
 
-    // إضافة عناوين الأعمدة
+    // إضافة عناوين الأعمدة بترتيب معكوس للعربية
     data.push([
-      "رقم الرحلة",
-      "اسم العميل / المرافق",
-      "رقم الهاتف",
-      "الجنسية",
-      "مكان الانطلاق",
-      "الوجهة",
       "تاريخ العودة",
+      "الوجهة",
+      "مكان الانطلاق",
+      "الجنسية",
+      "رقم الهاتف",
+      "اسم العميل / المرافق",
+      "رقم الرحلة",
     ]);
 
-    // إضافة بيانات العملاء والمرافقين
+    // إضافة بيانات العملاء والمرافقين بترتيب معكوس
     clients.forEach((client) => {
       data.push([
-        client.tripNumber,
-        client.clientName,
-        client.phone,
-        client.nationality,
-        client.departureLocation,
-        client.destination,
         new Date(client.returnDate).toLocaleDateString(),
+        client.destination,
+        client.departureLocation,
+        client.nationality,
+        client.phone,
+        client.clientName,
+        client.tripNumber,
       ]);
     });
 
     // إنشاء ورقة عمل
     const ws = XLSX.utils.aoa_to_sheet(data);
 
-    // تنسيق الأعمدة
+    // تنسيق الأعمدة مع عرض أكبر
     const wscols = [
-      { wch: 15 }, // عرض الأعمدة
-      { wch: 20 },
-      { wch: 15 },
-      { wch: 15 },
-      { wch: 15 },
-      { wch: 15 },
-      { wch: 15 },
+      { wch: 20 }, // تاريخ العودة
+      { wch: 20 }, // الوجهة
+      { wch: 25 }, // مكان الانطلاق
+      { wch: 20 }, // الجنسية
+      { wch: 20 }, // رقم الهاتف
+      { wch: 35 }, // اسم العميل
+      { wch: 15 }, // رقم الرحلة
     ];
     ws["!cols"] = wscols;
+
+    // تنسيق عنوان الملف
+    const titleCell = XLSX.utils.encode_cell({ r: 0, c: 0 });
+    ws[titleCell].s = {
+      font: { bold: true, sz: 14 },
+      alignment: { horizontal: "right", readingOrder: 2, wrapText: true },
+    };
 
     // تنسيق العناوين
     const headerRange = XLSX.utils.decode_range(ws["!ref"]);
     for (let C = headerRange.s.c; C <= headerRange.e.c; ++C) {
-      const cellAddress = XLSX.utils.encode_cell({ r: 1, c: C }); // العنوان في الصف الثاني
+      const cellAddress = XLSX.utils.encode_cell({ r: 2, c: C }); // العنوان في الصف الثالث
       if (!ws[cellAddress]) ws[cellAddress] = { v: "" };
       ws[cellAddress].s = {
-        font: { bold: true, sz: 14 }, // خط عريض وحجم كبير
-        alignment: { horizontal: "center" }, // محاذاة النص في المنتصف
-        fill: { fgColor: { rgb: "D9D9D9" } }, // لون خلفية العناوين
+        font: { bold: true, sz: 14, color: { rgb: "FFFFFF" } }, // خط أبيض
+        alignment: { horizontal: "right", readingOrder: 2, wrapText: true },
+        fill: { fgColor: { rgb: "4F81BD" } },
+        border: {
+          top: { style: "thin" },
+          bottom: { style: "thin" },
+          left: { style: "thin" },
+          right: { style: "thin" },
+        },
       };
+    }
+
+    // تنسيق باقي الخلايا
+    for (let R = 3; R <= headerRange.e.r; ++R) {
+      for (let C = headerRange.s.c; C <= headerRange.e.c; ++C) {
+        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+        if (!ws[cellAddress]) ws[cellAddress] = { v: "" };
+        ws[cellAddress].s = {
+          alignment: { horizontal: "right", readingOrder: 2, wrapText: true },
+          border: {
+            top: { style: "thin" },
+            bottom: { style: "thin" },
+            left: { style: "thin" },
+            right: { style: "thin" },
+          },
+        };
+      }
     }
 
     // إنشاء مصنف وإضافة الورقة

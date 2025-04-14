@@ -99,7 +99,7 @@ const TripPage = () => {
       phone: client.phone || "",
       identityNumber: client.identityNumber || "",
       nationality: client.nationality || "",
-      boardingLocation: "",
+      boardingLocation: client.boardingLocation || "",
       returnStatus: "لا",
       accompanyingPersons: [],
     });
@@ -168,13 +168,29 @@ const TripPage = () => {
   const handleDeleteClient = async (clientId) => {
     if (window.confirm("هل أنت متأكد من حذف هذا العميل من الرحلة؟")) {
       try {
+        // Retrieve the token from local storage
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+          setError("يجب تسجيل الدخول أولاً");
+          setLoading(false);
+          return;
+        }
+
         const response = await instance.delete(
-          `/trips/${tripId}/clients/${clientId}`
+          `/trips/${tripId}/clients/${clientId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
         );
 
         if (response.status === 200) {
           toast.success("تم حذف العميل من الرحلة بنجاح!");
           await fetchTrip();
+        } else if (response.status === 403) {
+          toast.error("ليس لديك صلاحية لتنفيذ هذا العملية");
         }
       } catch (error) {
         console.error("Error deleting client:", error);
@@ -228,12 +244,11 @@ const TripPage = () => {
       "",
       "",
       "",
-      "",
       "مؤسسة صدي الحكمه للخدمات التسويقية",
       "الشركة المستأجرة:",
     ]);
 
-    data.push(["", "", "", "", "", "", "", "", "", "5855356045", "س.ت:"]);
+    data.push(["", "", "", "", "", "", "", "", "5855356045", "س.ت:"]);
 
     // Second Row (Company Details)
     data.push([
@@ -246,8 +261,7 @@ const TripPage = () => {
       "",
       "",
       "",
-      "",
-      "الشركة الناقلة / شركة سابتكو",
+      "الشركة الناقلة / " + trip.leasingCompany,
     ]);
 
     // Third Row (Bus Details)
@@ -262,7 +276,6 @@ const TripPage = () => {
       "رقم الباص:",
       "",
       trip.busDetails?.licensePlate || "",
-      "أ س ن",
     ]);
 
     // Fourth Row (Driver 1 Details)
@@ -274,9 +287,9 @@ const TripPage = () => {
       "",
       "",
       trip.drivers?.[0]?.driverPhone || "لا يوجد",
-      "جوال السائق:",
+      "جوال السائق الاول:",
       trip.drivers?.[0]?.driverName || "لا يوجد",
-      "اسم السائق:",
+      "اسم السائق الاول:",
       "",
     ]);
 
@@ -291,7 +304,7 @@ const TripPage = () => {
       "",
       "",
       trip.drivers?.[0]?.driverId || "لا يوجد",
-      "رقم الهوية:",
+      "رقم الهوية الاول:",
       "",
     ]);
 
@@ -304,9 +317,9 @@ const TripPage = () => {
       "",
       "",
       trip.drivers?.[1]?.driverPhone || "لا يوجد",
-      "جوال السائق:",
+      "جوال السائق الثاني:",
       trip.drivers?.[1]?.driverName || "لا يوجد",
-      "اسم السائق:",
+      "اسم السائق الثاني:",
       "",
     ]);
 
@@ -321,7 +334,7 @@ const TripPage = () => {
       "",
       "",
       trip.drivers?.[1]?.driverId || "لا يوجد",
-      "رقم الهوية:",
+      "رقم الهوية الثاني:",
       "",
     ]);
 
@@ -446,8 +459,9 @@ const TripPage = () => {
     // Create worksheet
     const ws = XLSX.utils.aoa_to_sheet(data);
 
-    // Set RTL direction
+    // Set RTL direction and ensure it's applied
     ws["!rtl"] = true;
+    ws["!direction"] = "rtl";
 
     // Styling
     const range = XLSX.utils.decode_range(ws["!ref"]);
@@ -456,13 +470,14 @@ const TripPage = () => {
         const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
         if (!ws[cellAddress]) ws[cellAddress] = { v: "" };
 
-        // Default cell style
+        // Default cell style with RTL alignment
         ws[cellAddress].s = {
           font: { name: "Arial", sz: 10 },
           alignment: {
             horizontal: "right",
             vertical: "center",
             wrapText: true,
+            readingOrder: 2, // RTL reading order
           },
           border: {
             top: { style: "thin", color: { rgb: "000000" } },
@@ -553,7 +568,8 @@ const TripPage = () => {
           "اسم العميل": client.client.name,
           "رقم الهوية": client.client.identityNumber,
           "رقم الجوال": client.client.phone,
-          "مكان الركوب": client.client.boardingLocation,
+          "مكان الركوب":
+            client.boardingLocation || client.client.boardingLocation,
           "التكلفة الإجمالية": client.totalCost,
           "المبلغ المدفوع": client.totalPaid,
           "المبلغ المتبقي": client.remainingAmount,
@@ -565,8 +581,9 @@ const TripPage = () => {
         (person) => ({
           "اسم العميل": person.name,
           "رقم الهوية": person.identityNumber,
-          "رقم الجوال": client.client.phone, // نفس رقم جوال العميل
-          "مكان الركوب": client.client.boardingLocation,
+          "رقم الجوال": client.client.phone,
+          "مكان الركوب":
+            client.boardingLocation || client.client.boardingLocation,
           "التكلفة الإجمالية": "",
           "المبلغ المدفوع": "",
           "المبلغ المتبقي": "",
@@ -590,7 +607,7 @@ const TripPage = () => {
         "رقم الجوال",
         "رقم الهوية",
         "اسم العميل",
-      ], // العناوين (معكوسة)
+      ], // العناوين
       ...clientsData.map((client) => [
         client["ملاحظات"],
         client["المبلغ المتبقي"],
@@ -610,71 +627,69 @@ const TripPage = () => {
     // تعيين اتجاه الورقة من اليمين إلى اليسار
     ws["!rtl"] = true;
 
-    // تعريف الأنماط
-    const headerStyle = {
-      font: { bold: true, color: { rgb: "FFFFFF" } }, // خط عريض، لون أبيض
-      fill: { fgColor: { rgb: "2F75B5" } }, // خلفية زرقاء داكنة
-      alignment: { horizontal: "center", vertical: "center", wrapText: true }, // توسيط النص
-      border: {
-        top: { style: "medium", color: { rgb: "000000" } },
-        bottom: { style: "medium", color: { rgb: "000000" } },
-        left: { style: "medium", color: { rgb: "000000" } },
-        right: { style: "medium", color: { rgb: "000000" } },
-      },
-    };
-
-    const titleStyle = {
-      font: { bold: true, size: 16, color: { rgb: "000000" } }, // خط عريض، حجم كبير
-      alignment: { horizontal: "center", vertical: "center" }, // توسيط النص عمودي وأفقي
-      fill: { fgColor: { rgb: "D3D3D3" } }, // خلفية رمادية فاتحة
-    };
-
-    const cellStyle = {
-      alignment: { horizontal: "right", vertical: "center", wrapText: true }, // توسيط النص
-      border: {
-        top: { style: "thin", color: { rgb: "000000" } },
-        bottom: { style: "thin", color: { rgb: "000000" } },
-        left: { style: "thin", color: { rgb: "000000" } },
-        right: { style: "thin", color: { rgb: "000000" } },
-      },
-    };
-
-    const numberCellStyle = {
-      ...cellStyle,
-      numFmt: "#,##0.00", // تنسيق الأرقام
-      alignment: { horizontal: "right", vertical: "center", wrapText: true }, // توسيط النص
-    };
-
     // تطبيق الأنماط
     const range = XLSX.utils.decode_range(ws["!ref"]); // الحصول على نطاق الورقة
 
     // تطبيق نمط العنوان الرئيسي
-    ws["A1"].s = titleStyle;
-    XLSX.utils.sheet_add_aoa(ws, [["كشف الرحلة"]], { origin: "A1" });
+    const titleCell = XLSX.utils.encode_cell({ r: 0, c: 0 });
+    ws[titleCell].s = {
+      font: { bold: true, size: 16, color: { rgb: "000000" } },
+      alignment: { horizontal: "center", vertical: "center" },
+      fill: { fgColor: { rgb: "D3D3D3" } },
+    };
 
     // تطبيق نمط العناوين
     for (let C = range.s.c; C <= range.e.c; ++C) {
-      const cellAddress = XLSX.utils.encode_cell({ r: 2, c: C }); // الصف الثالث (العناوين)
-      if (!ws[cellAddress]) ws[cellAddress] = {};
-      ws[cellAddress].s = headerStyle;
+      const headerCell = XLSX.utils.encode_cell({ r: 2, c: C });
+      if (!ws[headerCell]) ws[headerCell] = { v: "" };
+      ws[headerCell].s = {
+        font: { bold: true, color: { rgb: "FFFFFF" } },
+        fill: { fgColor: { rgb: "2F75B5" } },
+        alignment: { horizontal: "center", vertical: "center", wrapText: true },
+        border: {
+          top: { style: "thin", color: { rgb: "000000" } },
+          bottom: { style: "thin", color: { rgb: "000000" } },
+          left: { style: "thin", color: { rgb: "000000" } },
+          right: { style: "thin", color: { rgb: "000000" } },
+        },
+      };
     }
 
     // تطبيق نمط الخلايا
-    for (let R = range.s.r; R <= range.e.r; ++R) {
+    for (let R = 3; R <= range.e.r; ++R) {
       for (let C = range.s.c; C <= range.e.c; ++C) {
         const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-        if (!ws[cellAddress]) ws[cellAddress] = {};
+        if (!ws[cellAddress]) ws[cellAddress] = { v: "" };
+
+        // نمط أساسي للخلية
+        const baseStyle = {
+          font: { name: "Arial", sz: 10 },
+          alignment: {
+            horizontal: "right",
+            vertical: "center",
+            wrapText: true,
+          },
+          border: {
+            top: { style: "thin", color: { rgb: "000000" } },
+            bottom: { style: "thin", color: { rgb: "000000" } },
+            left: { style: "thin", color: { rgb: "000000" } },
+            right: { style: "thin", color: { rgb: "000000" } },
+          },
+        };
 
         // تطبيق نمط الأرقام على أعمدة التكلفة والمدفوع والمتبقي
-        if (C >= 4 && C <= 6 && R > 2) {
-          ws[cellAddress].s = numberCellStyle;
+        if (C >= 1 && C <= 3) {
+          ws[cellAddress].s = {
+            ...baseStyle,
+            numFmt: "#,##0.00",
+          };
         } else {
-          ws[cellAddress].s = cellStyle;
+          ws[cellAddress].s = baseStyle;
         }
       }
     }
 
-    // تعيين عرض الأعمدة (معكوس)
+    // تعيين عرض الأعمدة
     ws["!cols"] = [
       { wch: 30 }, // ملاحظات
       { wch: 15 }, // المبلغ المتبقي
@@ -687,9 +702,7 @@ const TripPage = () => {
     ];
 
     // دمج خلايا العنوان الرئيسي
-    ws["!merges"] = [
-      { s: { r: 0, c: 0 }, e: { r: 0, c: 7 } }, // دمج خلايا العنوان الرئيسي
-    ];
+    ws["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 7 } }];
 
     // إضافة الورقة إلى المصنف
     XLSX.utils.book_append_sheet(wb, ws, "كشف الرحلة");
@@ -719,6 +732,8 @@ const TripPage = () => {
         boardingLocation: clientToUpdate.boardingLocation,
         notes: clientToUpdate.notes,
       };
+
+      console.log("Updating client with data:", clientData);
 
       // Send the update request using PATCH
       const response = await instance.patch(

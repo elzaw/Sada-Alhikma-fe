@@ -176,43 +176,77 @@ const Clients = () => {
   const exportClientsToExcel = () => {
     const data = [];
 
+    // إضافة عنوان الملف
+    data.push(["قائمة العملاء"]);
+    data.push([]); // سطر فارغ
+
     // إضافة عناوين الأعمدة
-    data.push(["الاسم", "رقم الجوال", "الجنسية", "رقم الهوية", "مكان الركوب"]);
+    data.push(["مكان الركوب", "رقم الهوية", "الجنسية", "رقم الجوال", "الاسم"]);
 
     // إضافة بيانات العملاء
     clients.forEach((client) => {
       data.push([
-        client.name,
-        client.phone,
-        client.nationality,
-        client.identityNumber,
-        client.boardingLocation,
+        client.boardingLocation || "",
+        client.identityNumber || "",
+        client.nationality || "",
+        client.phone || "",
+        client.name || "",
       ]);
     });
 
     // إنشاء ورقة عمل
     const ws = XLSX.utils.aoa_to_sheet(data);
 
-    // تنسيق الأعمدة
+    // تنسيق الأعمدة مع عرض أكبر
     const wscols = [
-      { wch: 20 }, // عرض الأعمدة
-      { wch: 15 },
-      { wch: 15 },
-      { wch: 15 },
-      { wch: 20 },
+      { wch: 25 }, // مكان الركوب
+      { wch: 20 }, // رقم الهوية
+      { wch: 20 }, // الجنسية
+      { wch: 20 }, // رقم الجوال
+      { wch: 35 }, // الاسم
     ];
     ws["!cols"] = wscols;
+
+    // تنسيق عنوان الملف
+    const titleCell = XLSX.utils.encode_cell({ r: 0, c: 0 });
+    ws[titleCell].s = {
+      font: { bold: true, sz: 14 },
+      alignment: { horizontal: "right", readingOrder: 2, wrapText: true },
+    };
 
     // تنسيق العناوين
     const headerRange = XLSX.utils.decode_range(ws["!ref"]);
     for (let C = headerRange.s.c; C <= headerRange.e.c; ++C) {
-      const cellAddress = XLSX.utils.encode_cell({ r: 0, c: C });
+      const cellAddress = XLSX.utils.encode_cell({ r: 2, c: C }); // العنوان في الصف الثالث
       if (!ws[cellAddress]) ws[cellAddress] = { v: "" };
       ws[cellAddress].s = {
-        font: { bold: true, sz: 14 }, // خط عريض وحجم كبير
-        alignment: { horizontal: "center" }, // محاذاة النص في المنتصف
-        fill: { fgColor: { rgb: "D9D9D9" } }, // لون خلفية العناوين
+        font: { bold: true, sz: 14, color: { rgb: "FFFFFF" } }, // خط أبيض
+        alignment: { horizontal: "right", readingOrder: 2, wrapText: true },
+        fill: { fgColor: { rgb: "4F81BD" } }, // لون خلفية أزرق
+        border: {
+          top: { style: "thin" },
+          bottom: { style: "thin" },
+          left: { style: "thin" },
+          right: { style: "thin" },
+        },
       };
+    }
+
+    // تنسيق باقي الخلايا
+    for (let R = 3; R <= headerRange.e.r; ++R) {
+      for (let C = headerRange.s.c; C <= headerRange.e.c; ++C) {
+        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+        if (!ws[cellAddress]) ws[cellAddress] = { v: "" };
+        ws[cellAddress].s = {
+          alignment: { horizontal: "right", readingOrder: 2, wrapText: true },
+          border: {
+            top: { style: "thin" },
+            bottom: { style: "thin" },
+            left: { style: "thin" },
+            right: { style: "thin" },
+          },
+        };
+      }
     }
 
     // إنشاء مصنف وإضافة الورقة
@@ -222,6 +256,49 @@ const Clients = () => {
     // تصدير الملف
     XLSX.writeFile(wb, "قائمة_العملاء.xlsx");
   };
+
+  const deleteClient = async (clientId) => {
+    try {
+      const response = await instance.delete(`/clients/${clientId}`);
+      toast.success("تم حذف العميل بنجاح");
+      // Refresh clients list after deletion
+      fetchClients();
+    } catch (error) {
+      if (error.response?.status === 403) {
+        toast.error(
+          "غير مصرح لك بحذف العملاء. يجب أن تكون مسؤولاً للقيام بهذه العملية."
+        );
+      } else if (error.response?.status === 404) {
+        toast.error("العميل غير موجود");
+      } else {
+        toast.error("حدث خطأ أثناء حذف العميل");
+      }
+      console.error(
+        "Error deleting client:",
+        error.response?.data || error.message
+      );
+    }
+  };
+
+  // Add delete confirmation dialog
+  const confirmDelete = (clientId, clientName) => {
+    if (window.confirm(`هل أنت متأكد من حذف العميل "${clientName}"؟`)) {
+      deleteClient(clientId);
+    }
+  };
+
+  // Modify the delete button to use confirmation
+  const renderDeleteButton = (clientId, clientName) => (
+    <button
+      onClick={() => confirmDelete(clientId, clientName)}
+      className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md text-sm transition-colors duration-200"
+      title="حذف العميل"
+    >
+      <span className="hidden sm:inline">حذف</span>
+      <span className="sm:hidden">🗑️</span>
+    </button>
+  );
+
   return (
     <>
       {/* Buttons Container */}
@@ -312,12 +389,7 @@ const Clients = () => {
                       >
                         تعديل
                       </button>
-                      <button
-                        onClick={(e) => handleDeleteClick(client._id, e)}
-                        className="bg-red-500 text-white px-2 py-1 rounded text-sm"
-                      >
-                        حذف
-                      </button>
+                      {renderDeleteButton(client._id, client.name)}
                     </div>
                   </td>
                 </tr>
@@ -420,15 +492,7 @@ const Clients = () => {
               >
                 تعديل
               </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDeleteClick(client._id, e);
-                }}
-                className="bg-red-500 text-white px-2 py-1 rounded text-sm"
-              >
-                حذف
-              </button>
+              {renderDeleteButton(client._id, client.name)}
             </div>
           </div>
         ))}
