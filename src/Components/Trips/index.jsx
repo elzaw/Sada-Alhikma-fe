@@ -5,6 +5,8 @@ import toast from "react-hot-toast";
 import CreateTripForm from "./CreateTripForm";
 import UpdateTripForm from "./UpdateTripForm";
 import { ConfirmDialog } from "../ConfirmDialog"; // Import the ConfirmDialog component
+import { jwtDecode } from "jwt-decode";
+import axios from "axios";
 
 const Trips = () => {
   const [trips, setTrips] = useState([]);
@@ -54,11 +56,15 @@ const Trips = () => {
   // Confirm delete action
   const handleConfirmDelete = async (tripId) => {
     try {
+      // Retrieve the token from local storage
       const token = localStorage.getItem("token");
+
       if (!token) {
         toast.error("يجب تسجيل الدخول أولاً");
         return;
       }
+
+      const decodedToken = jwtDecode(token);
 
       const response = await instance.delete(`/trips/${tripId}`, {
         headers: {
@@ -66,25 +72,19 @@ const Trips = () => {
         },
       });
 
-      toast.success(response.data.message || "تم حذف الرحلة بنجاح");
+      toast.success("تم حذف الرحلة بنجاح");
       fetchTrips(); // Refresh the list
       setConfirmOpen(false); // Close the confirmation dialog
       setTripToDelete(null); // Reset the trip to delete
     } catch (error) {
       if (error.response?.status === 403) {
-        toast.error(
-          error.response.data.error ||
-            "غير مصرح لك بحذف الرحلات. يجب أن تكون مسؤولاً للقيام بهذه العملية."
-        );
-      } else if (error.response?.status === 401) {
-        toast.error("انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى.");
-        navigate("/login");
+        toast.error("غير مصرح لك بهذه العملية. يجب أن تكون مسؤولاً.");
       } else if (error.response?.status === 404) {
-        toast.error(error.response.data.error || "الرحلة غير موجودة");
+        toast.error("الرحلة غير موجودة");
       } else {
-        toast.error(error.response?.data?.error || "حدث خطأ أثناء حذف الرحلة");
-        console.error("Error deleting trip:", error);
+        toast.error("حدث خطأ أثناء حذف الرحلة");
       }
+      console.error("Delete error:", error.response?.data || error.message);
       setConfirmOpen(false);
       setTripToDelete(null);
     }
@@ -93,9 +93,8 @@ const Trips = () => {
   // Update the delete button to show only for admins
   const renderDeleteButton = (tripId) => {
     // Check both isAdmin and role to ensure compatibility
-    const isAdmin =
-      localStorage.getItem("isAdmin") === "true" ||
-      localStorage.getItem("role") === "admin";
+    const decodedToken = jwtDecode(localStorage.getItem("token"));
+    const isAdmin = decodedToken.role === "admin";
 
     if (!isAdmin) {
       console.log("User is not admin. Admin status:", {

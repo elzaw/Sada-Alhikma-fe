@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from "uuid";
 import instance from "../../API/instance";
 import toast from "react-hot-toast";
 import * as XLSX from "xlsx-js-style";
+import { jwtDecode } from "jwt-decode";
 
 const Accommodation = () => {
   // State management
@@ -547,6 +548,38 @@ const Accommodation = () => {
 
     // تصدير الملف
     XLSX.writeFile(wb, `تسكين_العملاء.xlsx`);
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      // Retrieve the token from local storage
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        toast.error("يجب تسجيل الدخول أولاً");
+        return;
+      }
+
+      const decodedToken = jwtDecode(token);
+
+      const response = await instance.delete(`/accommodation/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      toast.success("تم الحذف بنجاح");
+      fetchAccommodations(); // Refresh the list
+    } catch (error) {
+      if (error.response?.status === 403) {
+        toast.error("غير مصرح لك بهذه العملية. يجب أن تكون مسؤولاً.");
+      } else if (error.response?.status === 404) {
+        toast.error("العنصر غير موجود");
+      } else {
+        toast.error("حدث خطأ أثناء عملية الحذف");
+      }
+      console.error("Delete error:", error.response?.data || error.message);
+    }
   };
 
   return (

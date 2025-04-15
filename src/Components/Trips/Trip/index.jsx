@@ -4,6 +4,7 @@ import instance from "../../../API/instance";
 import toast from "react-hot-toast";
 import * as XLSX from "xlsx-js-style";
 import ClientFormModal from "../ClientFormModal"; // We'll create this component
+import { jwtDecode } from "jwt-decode";
 
 const TripPage = () => {
   const { tripId } = useParams();
@@ -176,6 +177,7 @@ const TripPage = () => {
           setLoading(false);
           return;
         }
+        const decodedToken = jwtDecode(token);
 
         const response = await instance.delete(
           `/trips/${tripId}/clients/${clientId}`,
@@ -186,14 +188,17 @@ const TripPage = () => {
           }
         );
 
+        console.log(response.status);
+
         if (response.status === 200) {
           toast.success("تم حذف العميل من الرحلة بنجاح!");
           await fetchTrip();
-        } else if (response.status === 403) {
+        } else if (decodedToken.role != "admin") {
           toast.error("ليس لديك صلاحية لتنفيذ هذا العملية");
         }
       } catch (error) {
         console.error("Error deleting client:", error);
+
         toast.error(
           `فشل في حذف العميل: ${error.response?.data?.error || error.message}`
         );

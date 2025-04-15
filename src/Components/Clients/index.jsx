@@ -7,6 +7,7 @@ import { Modal, Button, Checkbox } from "@mui/material";
 import * as XLSX from "xlsx-js-style";
 import { ConfirmDialog } from "../ConfirmDialog"; // For delete confirmation
 import toast from "react-hot-toast";
+import { jwtDecode } from "jwt-decode";
 
 const Clients = () => {
   const [showForm, setShowForm] = useState(false);
@@ -257,12 +258,25 @@ const Clients = () => {
     XLSX.writeFile(wb, "قائمة_العملاء.xlsx");
   };
 
-  const deleteClient = async (clientId) => {
+  const handleDeleteClient = async (clientId) => {
     try {
-      const response = await instance.delete(`/clients/${clientId}`);
+      // Retrieve the token from local storage
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        setError("يجب تسجيل الدخول أولاً");
+        setLoading(false);
+        return;
+      }
+      const decodedToken = jwtDecode(token);
+
+      const response = await instance.delete(`/clients/${clientId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       toast.success("تم حذف العميل بنجاح");
-      // Refresh clients list after deletion
-      fetchClients();
+      fetchClients(); // Refresh the list
     } catch (error) {
       if (error.response?.status === 403) {
         toast.error(
@@ -283,14 +297,17 @@ const Clients = () => {
   // Add delete confirmation dialog
   const confirmDelete = (clientId, clientName) => {
     if (window.confirm(`هل أنت متأكد من حذف العميل "${clientName}"؟`)) {
-      deleteClient(clientId);
+      handleDeleteClient(clientId);
     }
   };
 
   // Modify the delete button to use confirmation
   const renderDeleteButton = (clientId, clientName) => (
     <button
-      onClick={() => confirmDelete(clientId, clientName)}
+      onClick={(e) => {
+        e.stopPropagation();
+        confirmDelete(clientId, clientName);
+      }}
       className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md text-sm transition-colors duration-200"
       title="حذف العميل"
     >
