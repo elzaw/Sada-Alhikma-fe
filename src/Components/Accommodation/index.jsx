@@ -57,23 +57,66 @@ const Accommodation = () => {
   useEffect(() => {
     if (!selectedTripId) {
       setClients([]);
+      setGroups([]);
       return;
     }
 
-    const fetchClients = async () => {
+    const fetchData = async () => {
       setLoading(true);
       try {
-        const response = await instance.get(`/trips/${selectedTripId}`);
+        // First fetch accommodation data
+        let existingGroups = [];
+        let existingAssignedClientIds = new Set();
 
-        const formattedClients = response.data.clients.flatMap((clientObj) => {
-          // Extract main client
+        try {
+          const accommodationResponse = await instance.get(
+            `/accommodations/${selectedTripId}`
+          );
+          if (accommodationResponse.data) {
+            existingGroups = accommodationResponse.data.groups || [];
+            setSupervisorName(accommodationResponse.data.supervisorName || "");
+            setSupervisorPhone(
+              accommodationResponse.data.supervisorPhone || ""
+            );
+            setRoomCounts(
+              accommodationResponse.data.roomCounts || {
+                total: 0,
+                six: 0,
+                five: 0,
+                four: 0,
+                three: 0,
+                two: 0,
+              }
+            );
+
+            // Collect all assigned client IDs
+            existingGroups.forEach((group) => {
+              if (group.rooms) {
+                group.rooms.forEach((room) => {
+                  if (room.id) {
+                    existingAssignedClientIds.add(room.id);
+                  }
+                });
+              }
+            });
+          }
+        } catch (error) {
+          if (error.response?.status !== 404) {
+            console.error("Error fetching accommodation:", error);
+          }
+          // If 404 or other error, we'll just use empty groups
+          existingGroups = [];
+        }
+
+        // Then fetch all clients
+        const tripResponse = await instance.get(`/trips/${selectedTripId}`);
+        const allClients = tripResponse.data.clients.flatMap((clientObj) => {
           const mainClient = {
             id: clientObj.client._id,
             name: clientObj.client.name,
             identity: clientObj.client.identityNumber,
           };
 
-          // Extract accompanying persons
           const accompanyingClients = clientObj.accompanyingPersons.map(
             (person) => ({
               id: person._id,
@@ -82,18 +125,28 @@ const Accommodation = () => {
             })
           );
 
-          return [mainClient, ...accompanyingClients]; // Merge main client and their accompanying persons
+          return [mainClient, ...accompanyingClients];
         });
 
-        setClients(formattedClients);
+        // Filter out assigned clients
+        const availableClients = allClients.filter(
+          (client) => !existingAssignedClientIds.has(client.id)
+        );
+
+        // Update state
+        setGroups(
+          existingGroups.length > 0 ? existingGroups : initializeGroups()
+        );
+        setClients(availableClients);
       } catch (error) {
-        console.error("Error fetching clients:", error);
+        console.error("Error fetching data:", error);
+        toast.error("حدث خطأ أثناء تحميل البيانات");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchClients();
+    fetchData();
   }, [selectedTripId]);
 
   // Initialize groups
@@ -103,8 +156,29 @@ const Accommodation = () => {
       name: `مجموعة ${i + 1}`,
       rooms: [],
     }));
-    setGroups(initialGroups);
+    return initialGroups;
   };
+
+  // Update available clients whenever groups change
+  useEffect(() => {
+    if (!selectedTripId || !groups) return;
+
+    const assignedClientIds = new Set();
+    groups.forEach((group) => {
+      if (group.rooms) {
+        group.rooms.forEach((room) => {
+          if (room.id) {
+            assignedClientIds.add(room.id);
+          }
+        });
+      }
+    });
+
+    // Re-filter the clients list based on current assignments
+    setClients((prevClients) =>
+      prevClients.filter((client) => !assignedClientIds.has(client.id))
+    );
+  }, [groups]);
 
   // Add a new group
   const addGroup = () => {
@@ -115,8 +189,44 @@ const Accommodation = () => {
   };
 
   // Delete a group
-  const deleteGroup = (groupId) => {
-    setGroups(groups.filter((group) => group.id !== groupId));
+  const deleteGroup = async (groupId) => {
+    try {
+      const groupToDelete = groups.find((g) => g.id === groupId);
+      if (!groupToDelete) {
+        toast.error("لم يتم العثور على المجموعة");
+        return;
+      }
+
+      console.log("Deleting group:", groupToDelete.name); // Debug log
+
+      const response = await instance.delete(
+        `/accommodations/${selectedTripId}/groups/${encodeURIComponent(
+          groupToDelete.name
+        )}`
+      );
+
+      // Update local state with the updated accommodation data from the response
+      if (response.data && response.data.accommodation) {
+        // Renumber the groups
+        const updatedGroups = response.data.accommodation.groups.map(
+          (group, index) => ({
+            ...group,
+            name: `مجموعة ${index + 1}`,
+          })
+        );
+        setGroups(updatedGroups);
+        toast.success("تم حذف المجموعة بنجاح");
+      } else {
+        throw new Error("Invalid response from server");
+      }
+    } catch (error) {
+      console.error("Error deleting group:", error);
+      if (error.response?.status === 404) {
+        toast.error("لم يتم العثور على المجموعة المطلوبة");
+      } else {
+        toast.error("حدث خطأ أثناء حذف المجموعة");
+      }
+    }
   };
 
   // Drag-and-Drop Handler
@@ -136,6 +246,23 @@ const Accommodation = () => {
           ? { ...group, rooms: [...group.rooms, client] }
           : group
       );
+    } else if (destination.droppableId === "clients") {
+      // If dragged back to client list
+      const sourceGroup = updatedGroups.find(
+        (g) => g.id === source.droppableId
+      );
+      if (sourceGroup) {
+        const client = sourceGroup.rooms[source.index];
+        updatedClients.push(client);
+        updatedGroups = updatedGroups.map((group) =>
+          group.id === source.droppableId
+            ? {
+                ...group,
+                rooms: group.rooms.filter((_, i) => i !== source.index),
+              }
+            : group
+        );
+      }
     } else {
       // Dragged between groups
       const sourceGroup = updatedGroups.find(
@@ -144,10 +271,11 @@ const Accommodation = () => {
       const destinationGroup = updatedGroups.find(
         (g) => g.id === destination.droppableId
       );
-      const movedClient = sourceGroup.rooms[source.index];
-
-      sourceGroup.rooms.splice(source.index, 1);
-      destinationGroup.rooms.splice(destination.index, 0, movedClient);
+      if (sourceGroup && destinationGroup) {
+        const movedClient = sourceGroup.rooms[source.index];
+        sourceGroup.rooms.splice(source.index, 1);
+        destinationGroup.rooms.splice(destination.index, 0, movedClient);
+      }
     }
 
     setGroups(updatedGroups);
@@ -180,41 +308,6 @@ const Accommodation = () => {
       toast.error("حدث خطأ أثناء الحفظ. الرجاء المحاولة مرة أخرى.");
     }
   };
-
-  useEffect(() => {
-    if (!selectedTripId) {
-      setRoomCounts({ total: 0, six: 0, five: 0, four: 0, three: 0, two: 0 });
-      return;
-    }
-
-    const fetchAccommodation = async () => {
-      try {
-        const response = await instance.get(
-          `/accommodations/${selectedTripId}`
-        );
-        if (response.data) {
-          setSupervisorName(response.data.supervisorName);
-          setSupervisorPhone(response.data.supervisorPhone);
-          setGroups(response.data.groups);
-          setRoomCounts(response.data.roomCounts);
-        } else {
-          initializeGroups(); // إعادة ضبط المجموعات عند عدم وجود بيانات
-          setRoomCounts({
-            total: 0,
-            six: 0,
-            five: 0,
-            four: 0,
-            three: 0,
-            two: 0,
-          });
-        }
-      } catch (error) {
-        console.error("Error fetching accommodation:", error);
-      }
-    };
-
-    fetchAccommodation();
-  }, [selectedTripId]);
 
   const exportToExcel = () => {
     const data = [];
@@ -582,6 +675,41 @@ const Accommodation = () => {
     }
   };
 
+  const deleteClientFromRoom = async (groupId, roomIndex) => {
+    try {
+      const group = groups.find((g) => g.id === groupId);
+      if (!group) {
+        toast.error("لم يتم العثور على المجموعة");
+        return;
+      }
+
+      const response = await instance.delete(
+        `/accommodations/${selectedTripId}/groups/${group.name}/rooms/${roomIndex}`
+      );
+
+      // Update local state
+      const updatedGroups = groups.map((g) => {
+        if (g.id === groupId) {
+          const updatedRooms = [...g.rooms];
+          updatedRooms[roomIndex] = {
+            ...updatedRooms[roomIndex],
+            clientId: null,
+            name: null,
+            identity: null,
+          };
+          return { ...g, rooms: updatedRooms };
+        }
+        return g;
+      });
+
+      setGroups(updatedGroups);
+      toast.success("تم حذف العميل من الغرفة بنجاح");
+    } catch (error) {
+      console.error("Error deleting client from room:", error);
+      toast.error("حدث خطأ أثناء حذف العميل من الغرفة");
+    }
+  };
+
   return (
     <div className="p-4">
       <h1 className="text-2xl font-bold mb-4">تسكين الرحلات</h1>
@@ -748,16 +876,17 @@ const Accommodation = () => {
             </thead>
             <tbody>
               <tr>
-                {Object.keys(roomCounts).map((key) => (
-                  <td key={key} className="border p-2">
-                    <input
-                      type="number"
-                      value={roomCounts[key]}
-                      onChange={(e) => updateRoomCount(key, e.target.value)}
-                      className="border p-1 w-full"
-                    />
-                  </td>
-                ))}
+                {roomCounts &&
+                  Object.keys(roomCounts).map((key) => (
+                    <td key={key} className="border p-2">
+                      <input
+                        type="number"
+                        value={roomCounts[key]}
+                        onChange={(e) => updateRoomCount(key, e.target.value)}
+                        className="border p-1 w-full"
+                      />
+                    </td>
+                  ))}
               </tr>
             </tbody>
           </table>
